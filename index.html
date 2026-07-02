@@ -122,11 +122,16 @@ async function doRegister() {
 
   btn.disabled = true; btn.textContent = 'Mendaftar...';
   try {
-    await signUp(email, pass, { nama, no_wa: wa, role: 'advertiser' });
-    okEl.textContent = 'Pendaftaran berhasil! Silakan cek email untuk verifikasi, lalu masuk.';
-    okEl.style.display = 'block';
-    btn.textContent = 'Daftar Sekarang';
-    btn.disabled = false;
+    const result = await signUp(email, pass, { nama, no_wa: wa, role: 'advertiser' });
+    // Kalau session langsung ada (email confirm dimatikan) → langsung masuk
+    if (result?.session) {
+      window.location.href = 'dashboard.html';
+    } else {
+      okEl.textContent = 'Pendaftaran berhasil! Silakan masuk dengan akun kamu.';
+      okEl.style.display = 'block';
+      btn.textContent = 'Daftar Sekarang';
+      btn.disabled = false;
+    }
   } catch(e) {
     showErr(errEl, e.message);
     btn.disabled = false; btn.textContent = 'Daftar Sekarang';
