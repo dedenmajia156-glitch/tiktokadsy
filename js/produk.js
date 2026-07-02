@@ -108,16 +108,27 @@ async function saveProduk() {
   const uid = (await getUser()).id;
   const payload = { nama_produk: nama, product_id_tiktok: prodid, keterangan: ket, roas_high: roasHigh, roas_mid: roasMid, user_id: uid };
 
-  let error;
+  let error, newId;
   if (editId) {
     ({ error } = await db().from('products').update(payload).eq('id', editId));
   } else {
-    ({ error } = await db().from('products').insert(payload));
+    const { data: inserted, error: err } = await db().from('products').insert(payload).select('id').single();
+    error = err;
+    newId = inserted?.id;
   }
 
   btn.disabled = false; btn.textContent = 'Simpan';
 
   if (error) { showErr(errEl, error.message); return; }
+
+  // Auto-link ads_data lama yang product_id_raw-nya cocok (produk baru saja ditambah)
+  if (newId) {
+    await db().from('ads_data')
+      .update({ product_id: newId })
+      .eq('product_id_raw', prodid)
+      .eq('user_id', uid)
+      .is('product_id', null);
+  }
 
   showToast(editId ? 'Produk diperbarui!' : 'Produk ditambahkan!', 'success');
   closeModal();
