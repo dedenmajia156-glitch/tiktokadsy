@@ -3,7 +3,7 @@ function renderNav(activePage, pageTitle) {
   const sidebarHTML = `
   <aside class="sidebar">
     <a href="dashboard.html" class="sidebar-brand">
-      <div class="brand-icon">📊</div>
+      <div class="brand-icon"><img src="img/logo-adsy.png" alt="Adsy" style="width:24px;height:24px;object-fit:contain"></div>
       <div>
         <div class="brand-name">GMV Tracker</div>
         <span class="brand-sub">MAX Ads Dashboard</span>
