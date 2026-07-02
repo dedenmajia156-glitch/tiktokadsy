@@ -230,7 +230,7 @@ function renderVideos(videos) {
 
               return `<tr>
                 <td style="padding:8px">
-                  <div onclick="openPreview('${v.vid}','${(v.title||'').replace(/'/g,"\\'").slice(0,60)}')"
+                  <div onclick="openPreview('${v.vid}','${(v.title||'').replace(/'/g,"\\'").slice(0,60)}','${(v.account||'').replace(/'/g,"\\'")}')"
                     style="width:54px;height:96px;background:#0f0f0f;border-radius:8px;cursor:pointer;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:transform .15s"
                     onmouseenter="this.style.transform='scale(1.05)'" onmouseleave="this.style.transform='scale(1)'"
                     title="Preview Video">
@@ -272,13 +272,15 @@ function copyVid(vid) {
 
 
 // ============ VIDEO PREVIEW ============
-function openPreview(vid, title) {
-  // Buka popup kecil ukuran HP — paling reliable, tidak ada overlay/blokir
-  const url = `https://www.tiktok.com/video/${vid}`;
+function openPreview(vid, title, account) {
+  const handle = account ? '@' + account.replace(/^@/, '') : null;
+  const url = handle
+    ? `https://www.tiktok.com/${handle}/video/${vid}`
+    : `https://www.tiktok.com/video/${vid}`;
+
   const popup = window.open(url, 'tiktok_preview',
     'width=390,height=844,resizable=yes,scrollbars=yes,status=no,toolbar=no,menubar=no,location=no');
   if (!popup) {
-    // Fallback kalau popup diblokir browser
     document.getElementById('preview-title').textContent = title || vid;
     document.getElementById('preview-ext-link').href = url;
     document.getElementById('preview-body').innerHTML = `
