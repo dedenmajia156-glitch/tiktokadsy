@@ -156,18 +156,21 @@ async function syncDataIklan() {
   }
 
   // Update ads_data: cocokkan product_id_raw → product_id
-  let totalUpdated = 0;
+  let hasError = false;
   for (const p of prods) {
-    const { count } = await db().from('ads_data')
+    const { error: updErr } = await db().from('ads_data')
       .update({ product_id: p.id })
       .eq('product_id_raw', p.product_id_tiktok)
-      .eq('user_id', uid)
-      .select('id', { count: 'exact' });
-    totalUpdated += count || 0;
+      .eq('user_id', uid);
+    if (updErr) { hasError = true; }
   }
 
   btn.disabled = false; btn.textContent = '🔄 Sync Data Iklan';
-  showToast(`Sync selesai — ${totalUpdated} baris data iklan ter-link ke produk.`, 'success');
+  if (hasError) {
+    showToast('Sync selesai dengan beberapa error.', 'error');
+  } else {
+    showToast(`Sync selesai — ${prods.length} produk disinkronisasi ke data iklan.`, 'success');
+  }
 }
 
 async function deleteProduk(id, nama) {
