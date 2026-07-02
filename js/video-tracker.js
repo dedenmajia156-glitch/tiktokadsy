@@ -2,6 +2,7 @@ let profile = null;
 let videoMap = {};
 let selectedVideoId = null;
 let prodThresholds = {}; // product_id → { high, mid }
+let prodTiktokId = {};   // product_id → product_id_tiktok
 let allVideos = []; // semua video setelah filter, untuk pagination
 let vtPage = 0;
 
@@ -24,6 +25,7 @@ async function loadFilters() {
     opt.value = p.id; opt.textContent = p.nama_produk;
     sel.appendChild(opt);
     prodThresholds[p.id] = { high: p.roas_high ?? 3, mid: p.roas_mid ?? 1.5 };
+    prodTiktokId[p.id] = p.product_id_tiktok;
   });
   updateRoasFilter();
 }
@@ -257,7 +259,16 @@ function renderVideos(videos) {
                     </button>
                   </div>
                 </td>
-                <td><span class="badge badge-purple" style="font-size:10px">${v.produk}</span></td>
+                <td>
+                  <span class="badge badge-purple" style="font-size:10px">${v.produk}</span>
+                  ${prodTiktokId[v.product_id] ? `
+                  <div style="display:flex;align-items:center;gap:4px;margin-top:3px">
+                    <span style="font-size:10px;color:#64748b;font-family:monospace">${prodTiktokId[v.product_id]}</span>
+                    <button onclick="copyVid('${prodTiktokId[v.product_id]}')" title="Copy Product ID" style="background:none;border:none;cursor:pointer;padding:0;color:#94a3b8;line-height:1">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    </button>
+                  </div>` : ''}
+                </td>
                 <td class="num">${fmtRp(v.totalCost)}</td>
                 <td class="num">${fmtRp(v.totalRev)}</td>
                 <td><span class="${roasClass(v.roas, thr.high, thr.mid)} num fw-700">${v.roas.toFixed(2)}x</span></td>
