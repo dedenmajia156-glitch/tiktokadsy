@@ -189,7 +189,7 @@ function renderVideos(videos) {
                   <div class="vtitle">${v.title && v.title !== '-' ? v.title.slice(0,40) : 'ID: '+v.vid.slice(-10)}</div>
                   <div class="vaccount">${v.account}</div>
                   <div style="display:flex;align-items:center;gap:4px;margin-top:3px">
-                    <span style="font-size:10px;color:#cbd5e1;font-family:monospace">${v.vid}</span>
+                    <span style="font-size:10px;color:#64748b;font-family:monospace">${v.vid}</span>
                     <button onclick="copyVid('${v.vid}')" title="Copy Video ID" style="background:none;border:none;cursor:pointer;padding:0;color:#94a3b8;line-height:1;flex-shrink:0">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                     </button>
