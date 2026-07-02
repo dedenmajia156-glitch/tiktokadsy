@@ -59,18 +59,30 @@
       <input type="text" id="p-ket" placeholder="cth: Susu kambing etawa 4 box" />
     </div>
     <div class="field">
-      <label>Threshold ROAS</label>
-      <div style="display:flex;gap:12px;align-items:center">
-        <div style="flex:1">
-          <div style="font-size:11px;color:#64748b;margin-bottom:4px">Bagus (≥)</div>
-          <input type="number" id="p-roas-high" step="0.1" min="0" placeholder="3" style="width:100%" />
+      <label>Target ROAS per Zona</label>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <div style="flex:1;background:#d1fae5;border-radius:8px;padding:10px 12px">
+          <div style="font-size:10px;font-weight:700;color:#065f46;margin-bottom:6px">🟢 BAGUS (Scale)</div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <span style="font-size:11px;color:#065f46">≥</span>
+            <input type="number" id="p-roas-high" step="0.1" min="0" placeholder="3" style="width:100%;background:#fff;border:1px solid #a7f3d0;border-radius:6px;padding:5px 8px;font-size:13px;font-weight:600" />
+            <span style="font-size:11px;color:#065f46">x</span>
+          </div>
         </div>
-        <div style="flex:1">
-          <div style="font-size:11px;color:#64748b;margin-bottom:4px">OK (≥)</div>
-          <input type="number" id="p-roas-mid" step="0.1" min="0" placeholder="1.5" style="width:100%" />
+        <div style="flex:1;background:#fef3c7;border-radius:8px;padding:10px 12px">
+          <div style="font-size:10px;font-weight:700;color:#92400e;margin-bottom:6px">🟡 MONITOR</div>
+          <div style="font-size:11px;color:#92400e;padding:5px 0">antara keduanya</div>
+        </div>
+        <div style="flex:1;background:#fee2e2;border-radius:8px;padding:10px 12px">
+          <div style="font-size:10px;font-weight:700;color:#991b1b;margin-bottom:6px">🔴 KILL</div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <span style="font-size:11px;color:#991b1b">&lt;</span>
+            <input type="number" id="p-roas-mid" step="0.1" min="0" placeholder="1.5" style="width:100%;background:#fff;border:1px solid #fca5a5;border-radius:6px;padding:5px 8px;font-size:13px;font-weight:600" />
+            <span style="font-size:11px;color:#991b1b">x</span>
+          </div>
         </div>
       </div>
-      <div style="font-size:11px;color:#94a3b8;margin-top:6px">Kosongkan untuk pakai default (Bagus ≥3x, OK ≥1.5x)</div>
+      <div style="font-size:11px;color:#94a3b8">Kosongkan untuk pakai default (Bagus ≥3x, Kill &lt;1.5x)</div>
     </div>
     <div class="auth-err" id="modal-err"></div>
     <div class="modal-footer">
