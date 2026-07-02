@@ -108,26 +108,29 @@ async function saveProduk() {
   const uid = (await getUser()).id;
   const payload = { nama_produk: nama, product_id_tiktok: prodid, keterangan: ket, roas_high: roasHigh, roas_mid: roasMid, user_id: uid };
 
-  let error, newId;
+  let error;
   if (editId) {
     ({ error } = await db().from('products').update(payload).eq('id', editId));
   } else {
-    const { data: inserted, error: err } = await db().from('products').insert(payload).select('id').single();
-    error = err;
-    newId = inserted?.id;
+    ({ error } = await db().from('products').insert(payload));
   }
 
   btn.disabled = false; btn.textContent = 'Simpan';
 
   if (error) { showErr(errEl, error.message); return; }
 
-  // Auto-link ads_data lama yang product_id_raw-nya cocok (produk baru saja ditambah)
-  if (newId) {
+  // Ambil product UUID berdasarkan product_id_tiktok (cover insert & edit)
+  const { data: prod } = await db().from('products')
+    .select('id')
+    .eq('product_id_tiktok', prodid)
+    .eq('user_id', uid)
+    .single();
+
+  if (prod?.id) {
     await db().from('ads_data')
-      .update({ product_id: newId })
+      .update({ product_id: prod.id })
       .eq('product_id_raw', prodid)
-      .eq('user_id', uid)
-      .is('product_id', null);
+      .eq('user_id', uid);
   }
 
   showToast(editId ? 'Produk diperbarui!' : 'Produk ditambahkan!', 'success');
