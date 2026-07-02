@@ -206,8 +206,7 @@ function handleFile(file) {
 
       if (unmatched.length) {
         previewHTML += `<br><span style="color:#f59e0b;font-size:12px">
-          ⚠️ ${unmatched.length} Product ID belum terdaftar di menu Produk:<br>
-          ${unmatched.map(p => `<code style="font-size:10px">${p}</code>`).join(', ')}
+          ⚠️ ${unmatched.length} Product ID belum terdaftar di menu Produk — data tetap masuk tapi tanpa info produk.
         </span>`;
       }
 
