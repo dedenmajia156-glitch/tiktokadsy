@@ -58,6 +58,20 @@
       <label>Keterangan (opsional)</label>
       <input type="text" id="p-ket" placeholder="cth: Susu kambing etawa 4 box" />
     </div>
+    <div class="field">
+      <label>Threshold ROAS</label>
+      <div style="display:flex;gap:12px;align-items:center">
+        <div style="flex:1">
+          <div style="font-size:11px;color:#64748b;margin-bottom:4px">Bagus (≥)</div>
+          <input type="number" id="p-roas-high" step="0.1" min="0" placeholder="3" style="width:100%" />
+        </div>
+        <div style="flex:1">
+          <div style="font-size:11px;color:#64748b;margin-bottom:4px">OK (≥)</div>
+          <input type="number" id="p-roas-mid" step="0.1" min="0" placeholder="1.5" style="width:100%" />
+        </div>
+      </div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:6px">Kosongkan untuk pakai default (Bagus ≥3x, OK ≥1.5x)</div>
+    </div>
     <div class="auth-err" id="modal-err"></div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal()">Batal</button>
