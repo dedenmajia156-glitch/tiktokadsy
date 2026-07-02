@@ -273,17 +273,23 @@ function copyVid(vid) {
 
 // ============ VIDEO PREVIEW ============
 function openPreview(vid, title) {
-  document.getElementById('preview-title').textContent = title || vid;
-  document.getElementById('preview-ext-link').href = `https://www.tiktok.com/video/${vid}`;
-  document.getElementById('preview-body').innerHTML = `
-    <iframe
-      src="https://www.tiktok.com/embed/v2/${vid}"
-      style="width:340px;height:600px;border:none;display:block"
-      allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen"
-      allowfullscreen
-      scrolling="no">
-    </iframe>`;
-  document.getElementById('modal-preview').classList.add('open');
+  // Buka popup kecil ukuran HP — paling reliable, tidak ada overlay/blokir
+  const url = `https://www.tiktok.com/video/${vid}`;
+  const popup = window.open(url, 'tiktok_preview',
+    'width=390,height=844,resizable=yes,scrollbars=yes,status=no,toolbar=no,menubar=no,location=no');
+  if (!popup) {
+    // Fallback kalau popup diblokir browser
+    document.getElementById('preview-title').textContent = title || vid;
+    document.getElementById('preview-ext-link').href = url;
+    document.getElementById('preview-body').innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:16px;padding:24px;text-align:center">
+        <span style="font-size:40px">🚫</span>
+        <div style="font-size:14px;color:#fff;font-weight:600">Popup diblokir browser</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.6)">Izinkan popup di browser kamu, lalu coba lagi</div>
+        <a href="${url}" target="_blank" rel="noopener" class="btn btn-primary-sm">Buka di TikTok ↗</a>
+      </div>`;
+    document.getElementById('modal-preview').classList.add('open');
+  }
 }
 
 function closePreview() {
