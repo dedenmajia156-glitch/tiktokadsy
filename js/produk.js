@@ -31,7 +31,6 @@ async function loadProduk() {
           <tr>
             <th>#</th>
             <th>Nama Produk</th>
-            <th>Product ID TikTok</th>
             <th>Keterangan</th>
             <th>ROAS Target</th>
             <th>Dibuat</th>
@@ -42,8 +41,15 @@ async function loadProduk() {
           ${data.map((p, i) => `
             <tr>
               <td>${i + 1}</td>
-              <td><strong>${p.nama_produk}</strong></td>
-              <td><code style="font-size:11px;background:#f1f5f9;padding:3px 8px;border-radius:5px">${p.product_id_tiktok}</code></td>
+              <td>
+                <div style="font-weight:600">${p.nama_produk}</div>
+                <div style="display:flex;align-items:center;gap:4px;margin-top:3px">
+                  <span style="font-size:10px;color:#64748b;font-family:monospace">${p.product_id_tiktok}</span>
+                  <button onclick="copyProdId('${p.product_id_tiktok}')" title="Copy Product ID" style="background:none;border:none;cursor:pointer;padding:0;color:#94a3b8;line-height:1">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  </button>
+                </div>
+              </td>
               <td class="text-muted">${p.keterangan || '-'}</td>
               <td style="white-space:nowrap">
                 <span class="badge badge-green" style="font-size:10px">≥${p.roas_high ?? 3}x</span>
@@ -171,6 +177,10 @@ async function syncDataIklan() {
   } else {
     showToast(`Sync selesai — ${prods.length} produk disinkronisasi ke data iklan.`, 'success');
   }
+}
+
+function copyProdId(pid) {
+  navigator.clipboard.writeText(pid).then(() => showToast('Product ID disalin!', 'success'));
 }
 
 async function deleteProduk(id, nama) {
