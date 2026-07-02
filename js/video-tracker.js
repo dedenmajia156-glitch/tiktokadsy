@@ -199,6 +199,7 @@ function renderVideos(videos) {
         <table>
           <thead>
             <tr>
+              <th>Preview</th>
               <th>Video</th>
               <th>Produk</th>
               <th>Total Cost</th>
@@ -228,6 +229,14 @@ function renderVideos(videos) {
               }).join('');
 
               return `<tr>
+                <td style="padding:8px">
+                  <div onclick="openPreview('${v.vid}','${(v.title||'').replace(/'/g,"\\'").replace(/`/g,'\\`').slice(0,60)}')"
+                    style="width:54px;height:96px;background:#0f0f0f;border-radius:8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;position:relative;overflow:hidden;transition:transform .15s"
+                    onmouseenter="this.style.transform='scale(1.05)'" onmouseleave="this.style.transform='scale(1)'">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    <span style="font-size:8px;color:rgba(255,255,255,0.5);letter-spacing:.5px">TIKTOK</span>
+                  </div>
+                </td>
                 <td class="td-video" style="min-width:180px">
                   <div class="vtitle">${v.title && v.title !== '-' ? v.title.slice(0,40) : 'ID: '+v.vid.slice(-10)}</div>
                   <div class="vaccount">${v.account}</div>
@@ -246,10 +255,7 @@ function renderVideos(videos) {
                 ${bulanCols}
                 <td>${decBadge}</td>
                 <td style="position:sticky;right:0;background:#fff;z-index:1;box-shadow:-2px 0 6px rgba(0,0,0,0.06)">
-                  <div style="display:flex;gap:6px">
-                    <button class="btn btn-outline btn-sm" onclick="openPreview('${v.vid}','${(v.title||'').replace(/'/g,"\\'").slice(0,50)}')" title="Preview Video">▶</button>
-                    <button class="btn btn-primary-sm btn-sm" onclick="openDecisionModal('${v.vid}')">Keputusan</button>
-                  </div>
+                  <button class="btn btn-primary-sm btn-sm" onclick="openDecisionModal('${v.vid}')">Keputusan</button>
                 </td>
               </tr>`;
             }).join('')}
@@ -265,20 +271,33 @@ function copyVid(vid) {
 
 // ============ VIDEO PREVIEW ============
 function openPreview(vid, title) {
+  const tiktokUrl = `https://www.tiktok.com/video/${vid}`;
   document.getElementById('preview-title').textContent = title || ('Video ' + vid);
-  document.getElementById('preview-vid-id').textContent = vid;
-  document.getElementById('preview-tiktok-link').href = `https://www.tiktok.com/video/${vid}`;
-  document.getElementById('preview-body').innerHTML =
-    `<iframe src="https://www.tiktok.com/embed/v2/${vid}"
-      style="width:100%;height:560px;border:none"
-      allow="autoplay;fullscreen" allowfullscreen></iframe>`;
+  document.getElementById('preview-tiktok-link').href = tiktokUrl;
+
+  // Pakai blockquote + embed.js TikTok (lebih reliable dari iframe)
+  const body = document.getElementById('preview-body');
+  body.innerHTML = `
+    <blockquote class="tiktok-embed" cite="${tiktokUrl}" data-video-id="${vid}"
+      style="max-width:340px;min-width:325px;margin:0 auto">
+      <section></section>
+    </blockquote>`;
+
+  // Load embed.js — kalau sudah ada, trigger ulang
+  const existing = document.getElementById('tiktok-embed-js');
+  if (existing) existing.remove();
+  const s = document.createElement('script');
+  s.id = 'tiktok-embed-js';
+  s.src = 'https://www.tiktok.com/embed.js';
+  s.async = true;
+  document.body.appendChild(s);
+
   document.getElementById('modal-preview').classList.add('open');
 }
 
 function closePreview() {
   document.getElementById('modal-preview').classList.remove('open');
-  document.getElementById('preview-body').innerHTML =
-    '<div class="loader" style="margin:auto"><div class="spinner" style="border-color:#fff3;border-top-color:#fff"></div></div>';
+  document.getElementById('preview-body').innerHTML = '';
 }
 
 // ============ DECISION MODAL ============
