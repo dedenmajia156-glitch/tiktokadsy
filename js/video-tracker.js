@@ -230,9 +230,10 @@ function renderVideos(videos) {
 
               return `<tr>
                 <td style="padding:8px">
-                  <div onclick="openPreview('${v.vid}','${(v.title||'').replace(/'/g,"\\'").replace(/`/g,'\\`').slice(0,60)}')"
-                    style="width:54px;height:96px;background:#0f0f0f;border-radius:8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;position:relative;overflow:hidden;transition:transform .15s"
-                    onmouseenter="this.style.transform='scale(1.05)'" onmouseleave="this.style.transform='scale(1)'">
+                  <div onclick="openPreview('${v.vid}','${(v.title||'').replace(/'/g,"\\'").slice(0,60)}')"
+                    style="width:54px;height:96px;background:#0f0f0f;border-radius:8px;cursor:pointer;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:transform .15s"
+                    onmouseenter="this.style.transform='scale(1.05)'" onmouseleave="this.style.transform='scale(1)'"
+                    title="Preview Video">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                     <span style="font-size:8px;color:rgba(255,255,255,0.5);letter-spacing:.5px">TIKTOK</span>
                   </div>
@@ -269,35 +270,27 @@ function copyVid(vid) {
   navigator.clipboard.writeText(vid).then(() => showToast('Video ID disalin!', 'success'));
 }
 
+
 // ============ VIDEO PREVIEW ============
 function openPreview(vid, title) {
-  const tiktokUrl = `https://www.tiktok.com/video/${vid}`;
-  document.getElementById('preview-title').textContent = title || ('Video ' + vid);
-  document.getElementById('preview-tiktok-link').href = tiktokUrl;
-
-  // Pakai blockquote + embed.js TikTok (lebih reliable dari iframe)
-  const body = document.getElementById('preview-body');
-  body.innerHTML = `
-    <blockquote class="tiktok-embed" cite="${tiktokUrl}" data-video-id="${vid}"
-      style="max-width:340px;min-width:325px;margin:0 auto">
-      <section></section>
-    </blockquote>`;
-
-  // Load embed.js — kalau sudah ada, trigger ulang
-  const existing = document.getElementById('tiktok-embed-js');
-  if (existing) existing.remove();
-  const s = document.createElement('script');
-  s.id = 'tiktok-embed-js';
-  s.src = 'https://www.tiktok.com/embed.js';
-  s.async = true;
-  document.body.appendChild(s);
-
+  document.getElementById('preview-title').textContent = title || vid;
+  document.getElementById('preview-ext-link').href = `https://www.tiktok.com/video/${vid}`;
+  document.getElementById('preview-body').innerHTML = `
+    <iframe
+      src="https://www.tiktok.com/embed/v2/${vid}"
+      style="width:340px;height:600px;border:none;display:block"
+      allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen"
+      allowfullscreen
+      scrolling="no">
+    </iframe>`;
   document.getElementById('modal-preview').classList.add('open');
 }
 
 function closePreview() {
   document.getElementById('modal-preview').classList.remove('open');
-  document.getElementById('preview-body').innerHTML = '';
+  // Stop video dengan hapus iframe
+  document.getElementById('preview-body').innerHTML =
+    '<div class="loader"><div class="spinner" style="border-color:rgba(255,255,255,.2);border-top-color:#fff"></div></div>';
 }
 
 // ============ DECISION MODAL ============
