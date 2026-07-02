@@ -181,7 +181,7 @@ function handleFile(file) {
 
       if (!ws) { showErr(errEl, 'Tidak menemukan data yang valid. Pastikan file dari TikTok Seller Center.'); return; }
 
-      parsedRows = parseExcelRows(ws);
+      parsedRows = parseExcelRows(ws, file.name);
       if (!parsedRows.length) { showErr(errEl, 'Tidak ada baris data yang bisa diproses.'); return; }
 
       // Hitung ringkasan: bulan & produk yang terdeteksi
@@ -221,22 +221,36 @@ function handleFile(file) {
   reader.readAsBinaryString(file);
 }
 
-function parseExcelRows(json) {
+// Deteksi bulan dari nama file: "creative data ... 2025-07-02 00 ~ 2026-07-02 08"
+function bulanDariNamaFile(filename) {
+  // Ambil tanggal akhir dari nama file (setelah ~)
+  const match = filename.match(/~\s*(\d{4})-(\d{2})/);
+  if (match) {
+    const bulanNames = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+    return `${bulanNames[parseInt(match[2]) - 1]} ${match[1]}`;
+  }
+  // Fallback: bulan sekarang
+  const now = new Date();
+  const bulanNames = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  return `${bulanNames[now.getMonth()]} ${now.getFullYear()}`;
+}
+
+function parseExcelRows(json, filename) {
   const rawHeaders = json[0] || [];
   const headers = rawHeaders.map(h => String(h).toLowerCase().trim());
 
+  // Mapping header TikTok export langsung
   const map = {
-    bulan:          ['bulan'],
     campaign_name:  ['campaign name', 'nama kampanye'],
     campaign_id:    ['campaign id', 'id campaign'],
     product_id_raw: ['product id', 'id produk'],
     creative_type:  ['creative type', 'jenis materi iklan'],
     video_title:    ['video title', 'judul video'],
     video_id:       ['video id', 'id video'],
-    tiktok_account: ['titkok account', 'tiktok account', 'akun tiktok'],
+    tiktok_account: ['tiktok account', 'titkok account', 'akun tiktok'],
     status:         ['status'],
     cost:           ['cost', 'biaya'],
-    orders:         ['orders (sku)', 'orders', 'pesanan sku'],
+    orders:         ['sku orders', 'orders (sku)', 'orders', 'pesanan sku'],
     gross_revenue:  ['gross revenue', 'pendapatan kotor'],
   };
 
@@ -251,6 +265,9 @@ function parseExcelRows(json) {
   const idx = {};
   for (const [field, keys] of Object.entries(map)) idx[field] = findIdx(keys);
 
+  // Bulan dari nama file
+  const bulan = bulanDariNamaFile(filename || '');
+
   const rows = [];
   for (let i = 1; i < json.length; i++) {
     const row = json[i];
@@ -258,15 +275,6 @@ function parseExcelRows(json) {
 
     const cost    = parseFloat(String(row[idx.cost] || '0').replace(/[^0-9.]/g,'')) || 0;
     const revenue = parseFloat(String(row[idx.gross_revenue] || '0').replace(/[^0-9.]/g,'')) || 0;
-
-    // Bulan: bisa string "Juli 2026" atau Excel date number
-    let bulan = idx.bulan >= 0 ? String(row[idx.bulan] || '').trim() : '';
-    if (bulan && /^\d+(\.\d+)?$/.test(bulan)) {
-      // Excel date serial → convert
-      const d = new Date(Math.round((parseFloat(bulan) - 25569) * 86400 * 1000));
-      const bulanNames = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-      bulan = `${bulanNames[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
-    }
 
     rows.push({
       bulan,
