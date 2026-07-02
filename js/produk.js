@@ -138,6 +138,38 @@ async function saveProduk() {
   await loadProduk();
 }
 
+async function syncDataIklan() {
+  const btn = document.getElementById('btn-sync');
+  btn.disabled = true; btn.textContent = '⏳ Sync...';
+
+  const uid = (await getUser()).id;
+
+  // Ambil semua produk user
+  let q = db().from('products').select('id, product_id_tiktok');
+  if (profile?.role !== 'admin') q = q.eq('user_id', uid);
+  const { data: prods, error } = await q;
+
+  if (error || !prods?.length) {
+    showToast('Tidak ada produk untuk di-sync.', 'error');
+    btn.disabled = false; btn.textContent = '🔄 Sync Data Iklan';
+    return;
+  }
+
+  // Update ads_data: cocokkan product_id_raw → product_id
+  let totalUpdated = 0;
+  for (const p of prods) {
+    const { count } = await db().from('ads_data')
+      .update({ product_id: p.id })
+      .eq('product_id_raw', p.product_id_tiktok)
+      .eq('user_id', uid)
+      .select('id', { count: 'exact' });
+    totalUpdated += count || 0;
+  }
+
+  btn.disabled = false; btn.textContent = '🔄 Sync Data Iklan';
+  showToast(`Sync selesai — ${totalUpdated} baris data iklan ter-link ke produk.`, 'success');
+}
+
 async function deleteProduk(id, nama) {
   if (!confirm(`Hapus produk "${nama}"? Data iklan terkait juga akan hilang.`)) return;
   const { error } = await db().from('products').delete().eq('id', id);
