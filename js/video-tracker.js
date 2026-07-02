@@ -2,6 +2,8 @@ let profile = null;
 let videoMap = {};
 let selectedVideoId = null;
 let prodThresholds = {}; // product_id → { high, mid }
+let allVideos = []; // semua video setelah filter, untuk pagination
+let vtPage = 0;
 
 (async () => {
   profile = await initPage('video-tracker', 'Video Tracker');
@@ -27,9 +29,10 @@ async function loadFilters() {
 
 function setupFilters() {
   ['fil-produk','fil-roas','fil-status','fil-sort'].forEach(id => {
-    document.getElementById(id).addEventListener('change', loadVideos);
+    document.getElementById(id).addEventListener('change', () => { vtPage = 0; loadVideos(); });
   });
-  document.getElementById('fil-search').addEventListener('input', loadVideos);
+  document.getElementById('fil-search').addEventListener('input', () => { vtPage = 0; loadVideos(); });
+  document.getElementById('fil-perpage').addEventListener('change', () => { vtPage = 0; renderPage(); });
 }
 
 async function loadVideos() {
@@ -134,7 +137,47 @@ async function loadVideos() {
     return 0;
   });
 
-  renderVideos(videos);
+  allVideos = videos;
+  renderPage();
+}
+
+function renderPage() {
+  const pageSize = parseInt(document.getElementById('fil-perpage').value) || 100;
+  const totalPages = Math.ceil(allVideos.length / pageSize);
+  vtPage = Math.min(vtPage, Math.max(0, totalPages - 1));
+  const slice = allVideos.slice(vtPage * pageSize, (vtPage + 1) * pageSize);
+  renderVideos(slice);
+
+  const pg = document.getElementById('vt-pagination');
+  if (totalPages <= 1) { pg.style.display = 'none'; return; }
+  pg.style.display = 'flex';
+
+  const start = vtPage * pageSize + 1;
+  const end   = Math.min((vtPage + 1) * pageSize, allVideos.length);
+  document.getElementById('vt-page-info').textContent = `${start}–${end} dari ${allVideos.length} video`;
+  document.getElementById('vt-btn-prev').disabled = vtPage === 0;
+  document.getElementById('vt-btn-next').disabled = vtPage >= totalPages - 1;
+
+  const nums = document.getElementById('vt-page-nums');
+  nums.innerHTML = '';
+  let startP = Math.max(0, vtPage - 2);
+  let endP   = Math.min(totalPages - 1, startP + 4);
+  startP = Math.max(0, endP - 4);
+  for (let i = startP; i <= endP; i++) {
+    const btn = document.createElement('button');
+    btn.textContent = i + 1;
+    btn.className = 'btn btn-sm ' + (i === vtPage ? 'btn-primary-sm' : 'btn-outline');
+    btn.style.minWidth = '34px';
+    btn.onclick = () => { vtPage = i; renderPage(); };
+    nums.appendChild(btn);
+  }
+}
+
+function vtChangePage(dir) {
+  const pageSize = parseInt(document.getElementById('fil-perpage').value) || 100;
+  const totalPages = Math.ceil(allVideos.length / pageSize);
+  vtPage = Math.max(0, Math.min(vtPage + dir, totalPages - 1));
+  renderPage();
 }
 
 function renderVideos(videos) {

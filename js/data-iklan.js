@@ -2,6 +2,8 @@ let profile = null;
 let parsedRows = [];
 let userProducts = []; // cache produk user
 let prodThresholds = {}; // product_id → { high, mid }
+let currentPage = 0;
+let totalRows = 0;
 
 (async () => {
   profile = await initPage('data-iklan', 'Data Iklan');
@@ -44,45 +46,87 @@ async function loadFilters() {
 }
 
 function setupFilters() {
-  ['fil-bulan','fil-produk','fil-creative'].forEach(id => {
-    document.getElementById(id).addEventListener('change', loadData);
+  ['fil-bulan','fil-produk','fil-creative','fil-perpage'].forEach(id => {
+    document.getElementById(id).addEventListener('change', () => { currentPage = 0; loadData(); });
   });
-  document.getElementById('fil-search').addEventListener('input', loadData);
+  document.getElementById('fil-search').addEventListener('input', () => { currentPage = 0; loadData(); });
+}
+
+function changePage(dir) {
+  const pageSize = parseInt(document.getElementById('fil-perpage').value);
+  const totalPages = Math.ceil(totalRows / pageSize);
+  currentPage = Math.max(0, Math.min(currentPage + dir, totalPages - 1));
+  loadData();
 }
 
 async function loadData() {
-  const uid = (await getUser()).id;
+  const uid      = (await getUser()).id;
   const bulan    = document.getElementById('fil-bulan').value;
   const produkId = document.getElementById('fil-produk').value;
   const creative = document.getElementById('fil-creative').value;
-  const search   = document.getElementById('fil-search').value.toLowerCase();
+  const search   = document.getElementById('fil-search').value.trim();
+  const pageSize = parseInt(document.getElementById('fil-perpage').value) || 100;
+  const from     = currentPage * pageSize;
+  const to       = from + pageSize - 1;
 
-  let q = db().from('ads_data')
-    .select('*, products(nama_produk)')
-    .order('gross_revenue', { ascending: false });
+  function buildQuery(forCount) {
+    let q = db().from('ads_data');
+    if (forCount) {
+      q = q.select('*', { count: 'exact', head: true });
+    } else {
+      q = q.select('*, products(nama_produk)').order('gross_revenue', { ascending: false }).range(from, to);
+    }
+    if (profile?.role !== 'admin') q = q.eq('user_id', uid);
+    if (bulan)    q = q.eq('bulan', bulan);
+    if (produkId) q = q.eq('product_id', produkId);
+    if (creative) q = q.eq('creative_type', creative);
+    if (search)   q = q.or(`video_title.ilike.%${search}%,tiktok_account.ilike.%${search}%,campaign_name.ilike.%${search}%`);
+    return q;
+  }
 
-  if (profile?.role !== 'admin') q = q.eq('user_id', uid);
-  if (bulan) q = q.eq('bulan', bulan);
-  if (produkId) q = q.eq('product_id', produkId);
-  if (creative) q = q.eq('creative_type', creative);
-
-  let rows;
   try {
-    rows = await fetchAllRows(q);
-  } catch(e) {
-    showToast('Gagal load data: ' + e.message, 'error'); return;
-  }
-  if (search) {
-    rows = rows.filter(r =>
-      (r.video_title || '').toLowerCase().includes(search) ||
-      (r.tiktok_account || '').toLowerCase().includes(search) ||
-      (r.campaign_name || '').toLowerCase().includes(search)
-    );
-  }
+    const [{ count }, { data: rows, error }] = await Promise.all([
+      buildQuery(true),
+      buildQuery(false),
+    ]);
+    if (error) throw error;
 
-  document.getElementById('data-count').textContent = `${rows.length} data iklan`;
-  document.getElementById('btn-hapus-filter').style.display = bulan ? 'inline-flex' : 'none';
-  renderTable(rows);
+    totalRows = count || 0;
+    document.getElementById('data-count').textContent = `${totalRows.toLocaleString('id-ID')} data iklan`;
+    document.getElementById('btn-hapus-filter').style.display = bulan ? 'inline-flex' : 'none';
+    renderTable(rows || []);
+    renderPagination(pageSize);
+  } catch(e) {
+    showToast('Gagal load data: ' + e.message, 'error');
+  }
+}
+
+function renderPagination(pageSize) {
+  const totalPages = Math.ceil(totalRows / pageSize);
+  const pg = document.getElementById('pagination');
+  if (totalPages <= 1) { pg.style.display = 'none'; return; }
+  pg.style.display = 'flex';
+
+  const start = currentPage * pageSize + 1;
+  const end   = Math.min((currentPage + 1) * pageSize, totalRows);
+  document.getElementById('page-info').textContent = `${start}–${end} dari ${totalRows.toLocaleString('id-ID')}`;
+  document.getElementById('btn-prev').disabled = currentPage === 0;
+  document.getElementById('btn-next').disabled = currentPage >= totalPages - 1;
+
+  // Nomor halaman (max 5 ditampilkan)
+  const nums = document.getElementById('page-nums');
+  nums.innerHTML = '';
+  let startP = Math.max(0, currentPage - 2);
+  let endP   = Math.min(totalPages - 1, startP + 4);
+  startP = Math.max(0, endP - 4);
+  for (let i = startP; i <= endP; i++) {
+    const btn = document.createElement('button');
+    btn.textContent = i + 1;
+    btn.className = 'btn btn-sm ' + (i === currentPage ? 'btn-primary-sm' : 'btn-outline');
+    btn.style.minWidth = '34px';
+    btn.onclick = () => { currentPage = i; loadData(); };
+    nums.appendChild(btn);
+  }
 }
 
 function renderTable(rows) {
