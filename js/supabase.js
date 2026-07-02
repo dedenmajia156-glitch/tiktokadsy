@@ -1,6 +1,4 @@
-const SUPABASE_URL = 'GANTI_SUPABASE_URL';
-const SUPABASE_ANON_KEY = 'GANTI_SUPABASE_ANON_KEY';
-
+// SUPABASE_URL dan SUPABASE_ANON_KEY diambil dari js/config.js
 const _supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 async function getSession() {
