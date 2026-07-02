@@ -43,6 +43,12 @@
           <option value="Kartu produk">Kartu Produk</option>
         </select>
         <input type="text" id="fil-search" placeholder="🔍 Cari video / akun..." style="width:200px" />
+        <label>Per halaman:</label>
+        <select id="fil-perpage">
+          <option value="100">100</option>
+          <option value="200">200</option>
+          <option value="500">500</option>
+        </select>
       </div>
 
       <div class="card">
@@ -52,6 +58,14 @@
         </div>
         <div id="data-table">
           <div class="loader"><div class="spinner"></div></div>
+        </div>
+        <div id="pagination" style="display:none;padding:14px 16px;border-top:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <div id="page-info" style="font-size:13px;color:#64748b"></div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-outline btn-sm" id="btn-prev" onclick="changePage(-1)">← Prev</button>
+            <div id="page-nums" style="display:flex;gap:4px"></div>
+            <button class="btn btn-outline btn-sm" id="btn-next" onclick="changePage(1)">Next →</button>
+          </div>
         </div>
       </div>
 
