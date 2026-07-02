@@ -55,10 +55,25 @@
           <option value="roas_asc">ROAS Terendah</option>
         </select>
         <input type="text" id="fil-search" placeholder="🔍 Cari video / akun..." style="width:200px" />
+        <label>Per halaman:</label>
+        <select id="fil-perpage">
+          <option value="50">50</option>
+          <option value="100" selected>100</option>
+          <option value="200">200</option>
+        </select>
       </div>
 
       <div id="video-list">
         <div class="loader"><div class="spinner"></div></div>
+      </div>
+
+      <div id="vt-pagination" style="display:none;margin-top:12px;padding:12px 16px;background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.07);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div id="vt-page-info" style="font-size:13px;color:#64748b"></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="btn btn-outline btn-sm" id="vt-btn-prev" onclick="vtChangePage(-1)">← Prev</button>
+          <div id="vt-page-nums" style="display:flex;gap:4px"></div>
+          <button class="btn btn-outline btn-sm" id="vt-btn-next" onclick="vtChangePage(1)">Next →</button>
+        </div>
       </div>
 
     </div>
