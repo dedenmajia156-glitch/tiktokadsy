@@ -199,7 +199,6 @@ function renderVideos(videos) {
         <table>
           <thead>
             <tr>
-              <th>Preview</th>
               <th>Video</th>
               <th>Produk</th>
               <th>Total Cost</th>
@@ -229,15 +228,6 @@ function renderVideos(videos) {
               }).join('');
 
               return `<tr>
-                <td style="padding:8px">
-                  <div onclick="openPreview('${v.vid}','${(v.title||'').replace(/'/g,"\\'").slice(0,60)}','${(v.account||'').replace(/'/g,"\\'")}')"
-                    style="width:54px;height:96px;background:#0f0f0f;border-radius:8px;cursor:pointer;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:transform .15s"
-                    onmouseenter="this.style.transform='scale(1.05)'" onmouseleave="this.style.transform='scale(1)'"
-                    title="Preview Video">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                    <span style="font-size:8px;color:rgba(255,255,255,0.5);letter-spacing:.5px">TIKTOK</span>
-                  </div>
-                </td>
                 <td class="td-video" style="min-width:180px">
                   <div class="vtitle">${v.title && v.title !== '-' ? v.title.slice(0,40) : 'ID: '+v.vid.slice(-10)}</div>
                   <div class="vaccount">${v.account}</div>
@@ -270,56 +260,6 @@ function copyVid(vid) {
   navigator.clipboard.writeText(vid).then(() => showToast('Video ID disalin!', 'success'));
 }
 
-
-// ============ VIDEO PREVIEW ============
-async function openPreview(vid, title, account) {
-  const handle = account ? '@' + account.replace(/^@/, '') : null;
-  const url = handle
-    ? `https://www.tiktok.com/${handle}/video/${vid}`
-    : `https://www.tiktok.com/video/${vid}`;
-
-  document.getElementById('preview-title').textContent = title || vid;
-  document.getElementById('preview-ext-link').href = url;
-
-  const body = document.getElementById('preview-body');
-  body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:300px">
-    <div class="loader"><div class="spinner" style="border-color:rgba(255,255,255,.2);border-top-color:#fff"></div></div>
-  </div>`;
-  document.getElementById('modal-preview').classList.add('open');
-
-  try {
-    const res = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`);
-    const data = await res.json();
-    body.innerHTML = `
-      <div style="position:relative;cursor:pointer" onclick="window.open('${url}','_blank')">
-        <img src="${data.thumbnail_url}" alt="preview" style="width:100%;display:block;border-radius:0"
-          onerror="this.style.display='none'">
-        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.25)">
-          <div style="width:56px;height:56px;background:rgba(0,0,0,.65);border-radius:50%;display:flex;align-items:center;justify-content:center">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff" stroke="none"><polygon points="6 3 20 12 6 21 6 3"/></svg>
-          </div>
-        </div>
-      </div>
-      <div style="padding:14px;background:#111;color:#fff">
-        <div style="font-weight:600;font-size:13px;margin-bottom:4px;line-height:1.4">${data.title || title || ''}</div>
-        <div style="font-size:12px;color:rgba(255,255,255,.5)">@${data.author_name || account || ''}</div>
-      </div>`;
-  } catch(_) {
-    body.innerHTML = `
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;gap:12px;cursor:pointer"
-        onclick="window.open('${url}','_blank')">
-        <div style="width:64px;height:64px;background:rgba(255,255,255,.1);border-radius:50%;display:flex;align-items:center;justify-content:center">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff" stroke="none"><polygon points="6 3 20 12 6 21 6 3"/></svg>
-        </div>
-        <div style="font-size:13px;color:rgba(255,255,255,.6)">Klik untuk buka di TikTok</div>
-      </div>`;
-  }
-}
-
-function closePreview() {
-  document.getElementById('modal-preview').classList.remove('open');
-  document.getElementById('preview-body').innerHTML = '';
-}
 
 // ============ DECISION MODAL ============
 function openDecisionModal(videoId) {
