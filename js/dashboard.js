@@ -54,9 +54,10 @@ async function loadDashboard() {
   // hanya yang ada spend
   q = q.gt('cost', 0);
 
-  const { data, error } = await q;
-  if (error) { showToast('Gagal load data', 'error'); return; }
-  allData = data || [];
+  let allData2;
+  try { allData2 = await fetchAllRows(q); }
+  catch(e) { showToast('Gagal load data: ' + e.message, 'error'); return; }
+  allData = allData2;
 
   renderStats();
   renderChart();
