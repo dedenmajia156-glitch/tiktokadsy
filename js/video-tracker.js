@@ -246,7 +246,10 @@ function renderVideos(videos) {
                 ${bulanCols}
                 <td>${decBadge}</td>
                 <td style="position:sticky;right:0;background:#fff;z-index:1;box-shadow:-2px 0 6px rgba(0,0,0,0.06)">
-                  <button class="btn btn-primary-sm btn-sm" onclick="openDecisionModal('${v.vid}')">Keputusan</button>
+                  <div style="display:flex;gap:6px">
+                    <button class="btn btn-outline btn-sm" onclick="openPreview('${v.vid}','${(v.title||'').replace(/'/g,"\\'").slice(0,50)}')" title="Preview Video">▶</button>
+                    <button class="btn btn-primary-sm btn-sm" onclick="openDecisionModal('${v.vid}')">Keputusan</button>
+                  </div>
                 </td>
               </tr>`;
             }).join('')}
@@ -258,6 +261,24 @@ function renderVideos(videos) {
 
 function copyVid(vid) {
   navigator.clipboard.writeText(vid).then(() => showToast('Video ID disalin!', 'success'));
+}
+
+// ============ VIDEO PREVIEW ============
+function openPreview(vid, title) {
+  document.getElementById('preview-title').textContent = title || ('Video ' + vid);
+  document.getElementById('preview-vid-id').textContent = vid;
+  document.getElementById('preview-tiktok-link').href = `https://www.tiktok.com/video/${vid}`;
+  document.getElementById('preview-body').innerHTML =
+    `<iframe src="https://www.tiktok.com/embed/v2/${vid}"
+      style="width:100%;height:560px;border:none"
+      allow="autoplay;fullscreen" allowfullscreen></iframe>`;
+  document.getElementById('modal-preview').classList.add('open');
+}
+
+function closePreview() {
+  document.getElementById('modal-preview').classList.remove('open');
+  document.getElementById('preview-body').innerHTML =
+    '<div class="loader" style="margin:auto"><div class="spinner" style="border-color:#fff3;border-top-color:#fff"></div></div>';
 }
 
 // ============ DECISION MODAL ============
