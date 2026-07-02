@@ -1,6 +1,7 @@
 let profile = null;
 let parsedRows = [];
 let userProducts = []; // cache produk user
+let prodThresholds = {}; // product_id → { high, mid }
 
 (async () => {
   profile = await initPage('data-iklan', 'Data Iklan');
@@ -17,6 +18,9 @@ async function loadFilters() {
   if (profile?.role !== 'admin') q = q.eq('user_id', uid);
   const { data: prods } = await q;
   userProducts = prods || [];
+  userProducts.forEach(p => {
+    prodThresholds[p.id] = { high: p.roas_high ?? 3, mid: p.roas_mid ?? 1.5 };
+  });
 
   // Isi filter produk
   const selProduk = document.getElementById('fil-produk');
@@ -62,10 +66,12 @@ async function loadData() {
   if (produkId) q = q.eq('product_id', produkId);
   if (creative) q = q.eq('creative_type', creative);
 
-  const { data, error } = await q;
-  if (error) { showToast('Gagal load data', 'error'); return; }
-
-  let rows = data || [];
+  let rows;
+  try {
+    rows = await fetchAllRows(q);
+  } catch(e) {
+    showToast('Gagal load data: ' + e.message, 'error'); return;
+  }
   if (search) {
     rows = rows.filter(r =>
       (r.video_title || '').toLowerCase().includes(search) ||
@@ -107,6 +113,7 @@ function renderTable(rows) {
           ${rows.map(r => {
             const roas = r.cost > 0 ? r.gross_revenue / r.cost : 0;
             const roasTxt = r.cost > 0 ? roas.toFixed(2) + 'x' : '-';
+            const thr = prodThresholds[r.product_id] || { high: 3, mid: 1.5 };
             return `
             <tr>
               <td><span class="badge badge-purple">${r.products?.nama_produk || '—'}</span></td>
@@ -120,7 +127,7 @@ function renderTable(rows) {
               <td style="font-size:12px">${r.status || '-'}</td>
               <td class="text-right num">${fmtRp(r.cost)}</td>
               <td class="text-right num">${fmtRp(r.gross_revenue)}</td>
-              <td class="text-right"><span class="${roasClass(roas)} num">${roasTxt}</span></td>
+              <td class="text-right"><span class="${roasClass(roas, thr.high, thr.mid)} num">${roasTxt}</span></td>
               <td class="text-right">${r.orders || 0}</td>
             </tr>`;
           }).join('')}

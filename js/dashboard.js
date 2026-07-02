@@ -1,6 +1,7 @@
 let profile = null;
 let allData = [];
 let products = [];
+let prodThresholds = {};
 let chartRevenue = null;
 
 (async () => {
@@ -17,6 +18,9 @@ async function loadFilters() {
   if (profile?.role !== 'admin') q = q.eq('user_id', uid);
   const { data: prods } = await q;
   products = prods || [];
+  products.forEach(p => {
+    prodThresholds[p.id] = { high: p.roas_high ?? 3, mid: p.roas_mid ?? 1.5 };
+  });
 
   const selProduk = document.getElementById('fil-produk');
   products.forEach(p => {
@@ -151,7 +155,7 @@ function renderTopVideo() {
   const byVideo = {};
   allData.filter(r => r.video_id && r.video_id !== 'N/A').forEach(r => {
     const vid = r.video_id;
-    if (!byVideo[vid]) byVideo[vid] = { title: r.video_title || '-', account: r.tiktok_account || '-', cost: 0, rev: 0 };
+    if (!byVideo[vid]) byVideo[vid] = { title: r.video_title || '-', account: r.tiktok_account || '-', product_id: r.product_id, cost: 0, rev: 0 };
     byVideo[vid].cost += Number(r.cost) || 0;
     byVideo[vid].rev += Number(r.gross_revenue) || 0;
   });
@@ -169,17 +173,19 @@ function renderTopVideo() {
     return;
   }
 
-  list.innerHTML = sorted.map((v, i) => `
+  list.innerHTML = sorted.map((v, i) => {
+    const thr = prodThresholds[v.product_id] || { high: 3, mid: 1.5 };
+    return `
     <li>
       <div class="top-num ${numClasses[i]}">${String(i+1).padStart(2,'0')}</div>
       <div class="top-info">
         <div class="vname">${v.title === '-' || !v.title ? 'Video ID: ' + v.vid.slice(-8) : v.title.slice(0,40)}</div>
         <div class="vacct">${v.account}</div>
-        <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(100, v.roas / 5 * 100)}%"></div></div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(100, v.roas / thr.high * 100)}%"></div></div>
       </div>
-      <div class="top-roas ${roasClass(v.roas)}">${v.roas.toFixed(1)}x</div>
-    </li>
-  `).join('');
+      <div class="top-roas ${roasClass(v.roas, thr.high, thr.mid)}">${v.roas.toFixed(1)}x</div>
+    </li>`;
+  }).join('');
 }
 
 async function renderNeedCheck() {
@@ -223,14 +229,17 @@ function renderKillCandidates() {
   const byVideo = {};
   allData.filter(r => r.video_id && r.video_id !== 'N/A' && Number(r.cost) > 0).forEach(r => {
     const vid = r.video_id;
-    if (!byVideo[vid]) byVideo[vid] = { title: r.video_title || '-', account: r.tiktok_account || '-', cost: 0, rev: 0 };
+    if (!byVideo[vid]) byVideo[vid] = { title: r.video_title || '-', account: r.tiktok_account || '-', product_id: r.product_id, cost: 0, rev: 0 };
     byVideo[vid].cost += Number(r.cost) || 0;
     byVideo[vid].rev += Number(r.gross_revenue) || 0;
   });
 
   const candidates = Object.entries(byVideo)
     .map(([vid, d]) => ({ vid, ...d, roas: d.cost > 0 ? d.rev / d.cost : 0 }))
-    .filter(v => v.roas < 1.5 && v.cost > 10000)
+    .filter(v => {
+      const thr = prodThresholds[v.product_id] || { high: 3, mid: 1.5 };
+      return v.roas < thr.mid && v.cost > 10000;
+    })
     .sort((a, b) => a.roas - b.roas)
     .slice(0, 5);
 
@@ -245,14 +254,17 @@ function renderKillCandidates() {
     <table>
       <thead><tr><th>Video</th><th>ROAS</th><th>Spend</th></tr></thead>
       <tbody>
-        ${candidates.map(v => `<tr>
+        ${candidates.map(v => {
+          const thr = prodThresholds[v.product_id] || { high: 3, mid: 1.5 };
+          return `<tr>
           <td class="td-video">
             <div class="vtitle">${v.title === '-' ? 'Video ID: ' + v.vid.slice(-8) : v.title.slice(0,30)}</div>
             <div class="vaccount">${v.account}</div>
           </td>
-          <td><span class="${roasClass(v.roas)}">${v.roas.toFixed(2)}x</span></td>
+          <td><span class="${roasClass(v.roas, thr.high, thr.mid)}">${v.roas.toFixed(2)}x</span></td>
           <td><span class="text-muted">${fmtRp(v.cost)}</span></td>
-        </tr>`).join('')}
+        </tr>`;
+        }).join('')}
       </tbody>
     </table>`;
 }

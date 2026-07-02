@@ -157,11 +157,11 @@ function fmtRoas(cost, revenue) {
   return (revenue / cost).toFixed(2) + 'x';
 }
 
-function roasClass(roas) {
+function roasClass(roas, high = 3, mid = 1.5) {
   const r = parseFloat(roas);
   if (isNaN(r)) return '';
-  if (r >= 3) return 'roas-high';
-  if (r >= 1.5) return 'roas-mid';
+  if (r >= high) return 'roas-high';
+  if (r >= mid)  return 'roas-mid';
   return 'roas-low';
 }
 

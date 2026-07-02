@@ -33,6 +33,7 @@ async function loadProduk() {
             <th>Nama Produk</th>
             <th>Product ID TikTok</th>
             <th>Keterangan</th>
+            <th>ROAS Target</th>
             <th>Dibuat</th>
             <th>Aksi</th>
           </tr>
@@ -44,6 +45,10 @@ async function loadProduk() {
               <td><strong>${p.nama_produk}</strong></td>
               <td><code style="font-size:11px;background:#f1f5f9;padding:3px 8px;border-radius:5px">${p.product_id_tiktok}</code></td>
               <td class="text-muted">${p.keterangan || '-'}</td>
+              <td style="white-space:nowrap">
+                <span class="badge badge-green" style="font-size:10px">≥${p.roas_high ?? 3}x</span>
+                <span class="badge badge-gray" style="font-size:10px;margin-left:4px">≥${p.roas_mid ?? 1.5}x</span>
+              </td>
               <td class="text-muted">${new Date(p.created_at).toLocaleDateString('id-ID')}</td>
               <td>
                 <div style="display:flex;gap:6px">
@@ -68,10 +73,14 @@ async function openModal(id = null) {
     document.getElementById('p-nama').value = data.nama_produk || '';
     document.getElementById('p-prodid').value = data.product_id_tiktok || '';
     document.getElementById('p-ket').value = data.keterangan || '';
+    document.getElementById('p-roas-high').value = data.roas_high ?? 3;
+    document.getElementById('p-roas-mid').value = data.roas_mid ?? 1.5;
   } else {
     document.getElementById('p-nama').value = '';
     document.getElementById('p-prodid').value = '';
     document.getElementById('p-ket').value = '';
+    document.getElementById('p-roas-high').value = '';
+    document.getElementById('p-roas-mid').value = '';
   }
 
   document.getElementById('modal-produk').classList.add('open');
@@ -83,11 +92,13 @@ function closeModal() {
 }
 
 async function saveProduk() {
-  const nama   = document.getElementById('p-nama').value.trim();
-  const prodid = document.getElementById('p-prodid').value.trim();
-  const ket    = document.getElementById('p-ket').value.trim();
-  const errEl  = document.getElementById('modal-err');
-  const btn    = document.getElementById('btn-save-produk');
+  const nama     = document.getElementById('p-nama').value.trim();
+  const prodid   = document.getElementById('p-prodid').value.trim();
+  const ket      = document.getElementById('p-ket').value.trim();
+  const roasHigh = parseFloat(document.getElementById('p-roas-high').value) || 3;
+  const roasMid  = parseFloat(document.getElementById('p-roas-mid').value) || 1.5;
+  const errEl    = document.getElementById('modal-err');
+  const btn      = document.getElementById('btn-save-produk');
 
   errEl.style.display = 'none';
   if (!nama || !prodid) { showErr(errEl, 'Nama produk dan Product ID wajib diisi.'); return; }
@@ -95,7 +106,7 @@ async function saveProduk() {
   btn.disabled = true; btn.textContent = 'Menyimpan...';
 
   const uid = (await getUser()).id;
-  const payload = { nama_produk: nama, product_id_tiktok: prodid, keterangan: ket, user_id: uid };
+  const payload = { nama_produk: nama, product_id_tiktok: prodid, keterangan: ket, roas_high: roasHigh, roas_mid: roasMid, user_id: uid };
 
   let error;
   if (editId) {

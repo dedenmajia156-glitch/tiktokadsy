@@ -1,6 +1,7 @@
 let profile = null;
 let videoMap = {};
 let selectedVideoId = null;
+let prodThresholds = {}; // product_id → { high, mid }
 
 (async () => {
   profile = await initPage('video-tracker', 'Video Tracker');
@@ -20,6 +21,7 @@ async function loadFilters() {
     const opt = document.createElement('option');
     opt.value = p.id; opt.textContent = p.nama_produk;
     sel.appendChild(opt);
+    prodThresholds[p.id] = { high: p.roas_high ?? 3, mid: p.roas_mid ?? 1.5 };
   });
 }
 
@@ -167,6 +169,7 @@ function renderVideos(videos) {
           </thead>
           <tbody>
             ${videos.map(v => {
+              const thr = prodThresholds[v.product_id] || { high: 3, mid: 1.5 };
               const decBadge = v.decision
                 ? `<span class="badge badge-${v.decision.keputusan}">${v.decision.keputusan}</span>`
                 : '<span class="badge badge-gray">-</span>';
@@ -176,7 +179,7 @@ function renderVideos(videos) {
                 if (!d) return '<td style="text-align:center;color:#cbd5e1">-</td>';
                 const r = d.cost > 0 ? d.rev / d.cost : 0;
                 return `<td style="text-align:center">
-                  <div class="${roasClass(r)} num" style="font-size:12px;font-weight:700">${r.toFixed(1)}x</div>
+                  <div class="${roasClass(r, thr.high, thr.mid)} num" style="font-size:12px;font-weight:700">${r.toFixed(1)}x</div>
                   <div style="font-size:10px;color:#94a3b8">${fmtRp(d.cost)}</div>
                 </td>`;
               }).join('');
@@ -195,7 +198,7 @@ function renderVideos(videos) {
                 <td><span class="badge badge-purple" style="font-size:10px">${v.produk}</span></td>
                 <td class="num">${fmtRp(v.totalCost)}</td>
                 <td class="num">${fmtRp(v.totalRev)}</td>
-                <td><span class="${roasClass(v.roas)} num fw-700">${v.roas.toFixed(2)}x</span></td>
+                <td><span class="${roasClass(v.roas, thr.high, thr.mid)} num fw-700">${v.roas.toFixed(2)}x</span></td>
                 <td>${v.totalOrders}</td>
                 ${bulanCols}
                 <td>${decBadge}</td>
