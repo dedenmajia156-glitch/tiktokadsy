@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scale / Kill — GMV MAX Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/nav.js"></script>
+</head>
+<body>
+<div class="app-wrap">
+  <div id="sidebar-container"></div>
+  <div class="main-content">
+    <div id="topbar-container"></div>
+    <div class="page-content">
+
+      <div class="page-header">
+        <div>
+          <h2>⚡ Scale / Kill</h2>
+          <p>Kelola keputusan scale, kill, dan monitor per video</p>
+        </div>
+      </div>
+
+      <!-- Tab -->
+      <div style="display:flex;gap:4px;margin-bottom:20px;background:#f1f5f9;padding:4px;border-radius:12px;width:fit-content">
+        <button class="tab-btn active" data-tab="perlu-dicek" onclick="switchTab('perlu-dicek')">⚡ Perlu Dicek <span class="nav-badge" id="badge-cek" style="position:static;margin-left:4px">0</span></button>
+        <button class="tab-btn" data-tab="semua" onclick="switchTab('semua')">📋 Semua History</button>
+        <button class="tab-btn" data-tab="scale" onclick="switchTab('scale')">⬆ Scale</button>
+        <button class="tab-btn" data-tab="kill" onclick="switchTab('kill')">❌ Kill</button>
+        <button class="tab-btn" data-tab="monitor" onclick="switchTab('monitor')">👁 Monitor</button>
+      </div>
+
+      <div id="sk-content">
+        <div class="loader"><div class="spinner"></div></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Modal Isi Hasil -->
+<div class="modal-overlay" id="modal-hasil">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📊 Isi Hasil Evaluasi</div>
+      <button class="modal-close" onclick="closeHasilModal()">✕</button>
+    </div>
+    <div id="modal-hasil-info" style="background:#f8f9ff;border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px"></div>
+    <div class="field">
+      <label>Hasil setelah di-scale</label>
+      <div style="display:flex;gap:8px">
+        <button class="btn" style="background:#d1fae5;color:#065f46" id="h-naik" onclick="setHasil('naik')">📈 Naik</button>
+        <button class="btn" style="background:#fee2e2;color:#991b1b" id="h-turun" onclick="setHasil('turun')">📉 Turun</button>
+        <button class="btn" style="background:#fef3c7;color:#92400e" id="h-flat" onclick="setHasil('flat')">➡ Flat</button>
+      </div>
+      <input type="hidden" id="hasil-value" value="">
+    </div>
+    <div class="field">
+      <label>Keputusan Lanjut</label>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-scale" id="hl-scale" onclick="setHasilLanjut('scale')">⬆ Scale Lagi</button>
+        <button class="btn btn-kill" id="hl-kill" onclick="setHasilLanjut('kill')">❌ Kill</button>
+        <button class="btn btn-monitor" id="hl-monitor" onclick="setHasilLanjut('monitor')">👁 Monitor</button>
+      </div>
+      <input type="hidden" id="hasil-lanjut-value" value="">
+    </div>
+    <div class="field">
+      <label>Catatan</label>
+      <textarea id="hasil-note" rows="3" placeholder="cth: Revenue naik 2x, lanjut scale budget" style="resize:none"></textarea>
+    </div>
+    <div class="auth-err" id="hasil-err"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeHasilModal()">Batal</button>
+      <button class="btn btn-primary-sm" onclick="saveHasil()">Simpan Hasil</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.tab-btn {
+  padding: 8px 16px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all .2s;
+}
+.tab-btn.active {
+  background: #fff;
+  color: #6366f1;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+</style>
+
+<div id="toast-container"></div>
+<script src="js/scale-kill.js"></script>
+</body>
+</html>

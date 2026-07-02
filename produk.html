@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Produk — GMV MAX Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/nav.js"></script>
+</head>
+<body>
+<div class="app-wrap">
+  <div id="sidebar-container"></div>
+  <div class="main-content">
+    <div id="topbar-container"></div>
+    <div class="page-content">
+
+      <div class="page-header">
+        <div>
+          <h2>📦 Produk</h2>
+          <p>Kelola daftar produk TikTok kamu</p>
+        </div>
+        <button class="btn btn-primary-sm" onclick="openModal()">+ Tambah Produk</button>
+      </div>
+
+      <div class="card">
+        <div id="produk-list">
+          <div class="loader"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Modal Tambah/Edit Produk -->
+<div class="modal-overlay" id="modal-produk">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-produk-title">Tambah Produk</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="field">
+      <label>Nama Produk</label>
+      <input type="text" id="p-nama" placeholder="cth: PrimaGold 4 Box" />
+    </div>
+    <div class="field">
+      <label>Product ID TikTok</label>
+      <input type="text" id="p-prodid" placeholder="cth: 1729818964614415510" />
+    </div>
+    <div class="field">
+      <label>Keterangan (opsional)</label>
+      <input type="text" id="p-ket" placeholder="cth: Susu kambing etawa 4 box" />
+    </div>
+    <div class="auth-err" id="modal-err"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Batal</button>
+      <button class="btn btn-primary-sm" id="btn-save-produk" onclick="saveProduk()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="js/produk.js"></script>
+</body>
+</html>

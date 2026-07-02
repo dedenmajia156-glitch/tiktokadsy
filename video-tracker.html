@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Video Tracker — GMV MAX Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/nav.js"></script>
+</head>
+<body>
+<div class="app-wrap">
+  <div id="sidebar-container"></div>
+  <div class="main-content">
+    <div id="topbar-container"></div>
+    <div class="page-content">
+
+      <div class="page-header">
+        <div>
+          <h2>🎬 Video Tracker</h2>
+          <p>Performa setiap Video ID lintas bulan</p>
+        </div>
+      </div>
+
+      <!-- Filter -->
+      <div class="filter-bar">
+        <label>Produk:</label>
+        <select id="fil-produk"><option value="">Semua Produk</option></select>
+        <label>ROAS Min:</label>
+        <select id="fil-roas">
+          <option value="">Semua</option>
+          <option value="3">≥ 3x (Bagus)</option>
+          <option value="1.5">≥ 1.5x (OK)</option>
+          <option value="0" data-max="1.5">< 1.5x (Kill)</option>
+        </select>
+        <label>Sort:</label>
+        <select id="fil-sort">
+          <option value="roas_desc">ROAS Tertinggi</option>
+          <option value="revenue_desc">Revenue Tertinggi</option>
+          <option value="cost_desc">Spend Tertinggi</option>
+          <option value="roas_asc">ROAS Terendah</option>
+        </select>
+        <input type="text" id="fil-search" placeholder="🔍 Cari video / akun..." style="width:200px" />
+      </div>
+
+      <div id="video-list">
+        <div class="loader"><div class="spinner"></div></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Modal Scale/Kill dari Video Tracker -->
+<div class="modal-overlay" id="modal-decision">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-dec-title">Keputusan Video</div>
+      <button class="modal-close" onclick="closeDecisionModal()">✕</button>
+    </div>
+    <div id="modal-dec-info" style="background:#f8f9ff;border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px"></div>
+    <div class="field">
+      <label>Keputusan</label>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-scale" id="dec-scale" onclick="setDecision('scale')">⬆ Scale</button>
+        <button class="btn btn-kill" id="dec-kill" onclick="setDecision('kill')">❌ Kill</button>
+        <button class="btn btn-monitor" id="dec-monitor" onclick="setDecision('monitor')">👁 Monitor</button>
+      </div>
+      <input type="hidden" id="dec-value" value="">
+    </div>
+    <div class="field">
+      <label>Catatan (opsional)</label>
+      <textarea id="dec-note" rows="3" placeholder="cth: ROAS bagus, scale budget 2x" style="resize:none"></textarea>
+    </div>
+    <div class="auth-err" id="dec-err"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeDecisionModal()">Batal</button>
+      <button class="btn btn-primary-sm" onclick="saveDecision()">Simpan Keputusan</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="js/video-tracker.js"></script>
+</body>
+</html>

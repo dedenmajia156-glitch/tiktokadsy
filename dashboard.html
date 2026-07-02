@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — GMV MAX Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/nav.js"></script>
+</head>
+<body>
+<div class="app-wrap">
+  <div id="sidebar-container"></div>
+  <div class="main-content">
+    <div id="topbar-container"></div>
+    <div class="page-content">
+
+      <!-- Filter bulan & produk -->
+      <div class="filter-bar" style="margin-bottom:20px">
+        <label>Bulan:</label>
+        <select id="fil-bulan">
+          <option value="">Semua Bulan</option>
+        </select>
+        <label>Produk:</label>
+        <select id="fil-produk">
+          <option value="">Semua Produk</option>
+        </select>
+      </div>
+
+      <!-- Stat Cards -->
+      <div class="stat-grid" id="stat-grid">
+        <div class="stat-card">
+          <div class="stat-icon pink">💸</div>
+          <div class="stat-info">
+            <div class="value" id="stat-spend">-</div>
+            <div class="label">Total Ads Spend</div>
+            <div class="change" id="stat-spend-ch"></div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green">💰</div>
+          <div class="stat-info">
+            <div class="value" id="stat-revenue">-</div>
+            <div class="label">Total Revenue</div>
+            <div class="change" id="stat-revenue-ch"></div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon orange">📈</div>
+          <div class="stat-info">
+            <div class="value" id="stat-roas">-</div>
+            <div class="label">ROAS Rata-rata</div>
+            <div class="change" id="stat-roas-ch"></div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon purple">🎬</div>
+          <div class="stat-info">
+            <div class="value" id="stat-video">-</div>
+            <div class="label">Video Aktif</div>
+            <div class="change" id="stat-video-ch"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chart + Top Video -->
+      <div class="grid-65-35 mb-16">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Revenue & Spend per Bulan</div>
+              <div class="card-sub">Perbandingan biaya vs pendapatan</div>
+            </div>
+          </div>
+          <canvas id="chart-revenue" height="220"></canvas>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🏆 Top 5 Video ROAS</div>
+          </div>
+          <ul class="top-list" id="top-video-list">
+            <li><div class="loader"><div class="spinner"></div></div></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Video perlu dicek + perlu dimatikan -->
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">⚡ Perlu Dicek Sekarang</div>
+              <div class="card-sub">Video yang sudah di-scale dan menunggu evaluasi</div>
+            </div>
+            <a href="scale-kill.html" class="btn btn-outline btn-sm">Lihat Semua</a>
+          </div>
+          <div id="need-check-list">
+            <div class="loader"><div class="spinner"></div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">💀 Kandidat Kill</div>
+              <div class="card-sub">Video dengan ROAS rendah (< 1.5x)</div>
+            </div>
+            <a href="video-tracker.html" class="btn btn-outline btn-sm">Detail</a>
+          </div>
+          <div id="kill-candidates">
+            <div class="loader"><div class="spinner"></div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="js/dashboard.js"></script>
+</body>
+</html>

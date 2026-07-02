@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings — GMV MAX Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/nav.js"></script>
+</head>
+<body>
+<div class="app-wrap">
+  <div id="sidebar-container"></div>
+  <div class="main-content">
+    <div id="topbar-container"></div>
+    <div class="page-content">
+
+      <div class="page-header">
+        <div><h2>⚙️ Settings</h2><p>Kelola profil dan akun kamu</p></div>
+      </div>
+
+      <div style="max-width:520px">
+        <!-- Profil -->
+        <div class="card mb-16">
+          <div class="card-header">
+            <div class="card-title">Profil</div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
+            <div style="width:64px;height:64px;background:var(--primary);border-radius:16px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:26px;font-weight:700" id="big-avatar">?</div>
+            <div>
+              <div style="font-size:16px;font-weight:700" id="big-name">-</div>
+              <div class="text-muted" id="big-role">-</div>
+              <div class="text-muted" style="font-size:12px" id="big-email">-</div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Nama Lengkap</label>
+            <input type="text" id="s-nama" placeholder="Nama kamu" />
+          </div>
+          <div class="field">
+            <label>No WhatsApp</label>
+            <input type="tel" id="s-wa" placeholder="08xxxxxxxxxx" />
+          </div>
+          <div class="auth-err" id="profile-err"></div>
+          <div class="auth-ok" id="profile-ok"></div>
+          <button class="btn btn-primary-sm" onclick="saveProfile()" style="width:100%;margin-top:4px">Simpan Perubahan</button>
+        </div>
+
+        <!-- Ganti Password -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Ganti Password</div>
+          </div>
+          <div class="field">
+            <label>Password Baru</label>
+            <input type="password" id="s-pass" placeholder="min 6 karakter" />
+          </div>
+          <div class="field">
+            <label>Konfirmasi Password Baru</label>
+            <input type="password" id="s-pass2" placeholder="ulangi password baru" />
+          </div>
+          <div class="auth-err" id="pass-err"></div>
+          <div class="auth-ok" id="pass-ok"></div>
+          <button class="btn btn-primary-sm" onclick="changePassword()" style="width:100%;margin-top:4px">Ganti Password</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script>
+(async () => {
+  const prof = await initPage('settings', 'Settings');
+  const user = await getUser();
+
+  document.getElementById('big-email').textContent = user?.email || '-';
+  if (prof) {
+    document.getElementById('big-name').textContent = prof.nama || '-';
+    document.getElementById('big-role').textContent = prof.role === 'admin' ? 'Admin' : 'Advertiser';
+    document.getElementById('big-avatar').textContent = (prof.nama || 'U')[0].toUpperCase();
+    document.getElementById('s-nama').value = prof.nama || '';
+    document.getElementById('s-wa').value = prof.no_wa || '';
+  }
+})();
+
+async function saveProfile() {
+  const nama = document.getElementById('s-nama').value.trim();
+  const wa   = document.getElementById('s-wa').value.trim();
+  const errEl = document.getElementById('profile-err');
+  const okEl  = document.getElementById('profile-ok');
+  errEl.style.display = 'none'; okEl.style.display = 'none';
+
+  if (!nama) { showErr(errEl, 'Nama tidak boleh kosong.'); return; }
+
+  const user = await getUser();
+  const { error } = await db().from('profiles').update({ nama, no_wa: wa }).eq('id', user.id);
+
+  if (error) { showErr(errEl, error.message); return; }
+
+  okEl.textContent = 'Profil berhasil diperbarui!';
+  okEl.style.display = 'block';
+  document.getElementById('big-name').textContent = nama;
+  document.getElementById('big-avatar').textContent = nama[0].toUpperCase();
+  showToast('Profil diperbarui!', 'success');
+}
+
+async function changePassword() {
+  const pass  = document.getElementById('s-pass').value;
+  const pass2 = document.getElementById('s-pass2').value;
+  const errEl = document.getElementById('pass-err');
+  const okEl  = document.getElementById('pass-ok');
+  errEl.style.display = 'none'; okEl.style.display = 'none';
+
+  if (!pass) { showErr(errEl, 'Password tidak boleh kosong.'); return; }
+  if (pass.length < 6) { showErr(errEl, 'Password minimal 6 karakter.'); return; }
+  if (pass !== pass2) { showErr(errEl, 'Password tidak sama.'); return; }
+
+  const { error } = await db().auth.updateUser({ password: pass });
+  if (error) { showErr(errEl, error.message); return; }
+
+  okEl.textContent = 'Password berhasil diubah!';
+  okEl.style.display = 'block';
+  document.getElementById('s-pass').value = '';
+  document.getElementById('s-pass2').value = '';
+}
+</script>
+</body>
+</html>
