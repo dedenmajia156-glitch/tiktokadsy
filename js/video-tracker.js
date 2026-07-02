@@ -25,10 +25,16 @@ async function loadFilters() {
     sel.appendChild(opt);
     prodThresholds[p.id] = { high: p.roas_high ?? 3, mid: p.roas_mid ?? 1.5 };
   });
+  updateRoasFilter();
 }
 
 function setupFilters() {
-  ['fil-produk','fil-roas','fil-status','fil-sort'].forEach(id => {
+  document.getElementById('fil-produk').addEventListener('change', () => {
+    updateRoasFilter();
+    vtPage = 0;
+    loadVideos();
+  });
+  ['fil-roas','fil-status','fil-sort'].forEach(id => {
     document.getElementById(id).addEventListener('change', () => { vtPage = 0; loadVideos(); });
   });
   document.getElementById('fil-search').addEventListener('input', () => { vtPage = 0; loadVideos(); });
@@ -171,6 +177,19 @@ function renderPage() {
     btn.onclick = () => { vtPage = i; renderPage(); };
     nums.appendChild(btn);
   }
+}
+
+function updateRoasFilter() {
+  const produkId = document.getElementById('fil-produk').value;
+  const thr = prodThresholds[produkId] || { high: 3, mid: 1.5 };
+  const sel = document.getElementById('fil-roas');
+  const current = sel.value;
+  sel.innerHTML = `
+    <option value="">Semua</option>
+    <option value="${thr.high}">≥ ${thr.high}x (Bagus)</option>
+    <option value="${thr.mid}" data-max="${thr.high}">${thr.mid}x – ${thr.high}x (Monitor)</option>
+    <option value="0" data-max="${thr.mid}">< ${thr.mid}x (Kill)</option>`;
+  if ([...sel.options].some(o => o.value === current)) sel.value = current;
 }
 
 function vtChangePage(dir) {
