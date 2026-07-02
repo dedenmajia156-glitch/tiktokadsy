@@ -67,23 +67,11 @@
       <button class="modal-close" onclick="closeUpload()">✕</button>
     </div>
 
-    <div class="field">
-      <label>Pilih Produk</label>
-      <select id="up-produk">
-        <option value="">-- Pilih produk --</option>
-      </select>
-    </div>
-
-    <div class="field">
-      <label>Bulan Data</label>
-      <input type="month" id="up-bulan" />
-    </div>
-
     <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()">
       <div class="upload-icon">📊</div>
       <h3>Klik atau drag file Excel di sini</h3>
       <p>File export dari TikTok Seller Center (.xlsx)</p>
-      <p style="margin-top:8px;font-size:12px;color:#94a3b8">Pastikan header sesuai: Campaign name, Video ID, Cost, Gross revenue, dll</p>
+      <p style="margin-top:8px;font-size:12px;color:#94a3b8">Produk & bulan otomatis terbaca dari file</p>
     </div>
     <input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFile(this.files[0])">
 
