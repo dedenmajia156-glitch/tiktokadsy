@@ -81,18 +81,17 @@
 </div>
 
 <!-- Modal Video Preview -->
-<div class="modal-overlay" id="modal-preview">
-  <div class="modal" style="max-width:400px;padding:20px">
+<div class="modal-overlay" id="modal-preview" onclick="if(event.target===this)closePreview()">
+  <div class="modal" style="max-width:380px;padding:20px">
     <div class="modal-header" style="margin-bottom:14px">
       <div class="modal-title" id="preview-title" style="font-size:14px;max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Preview Video</div>
       <button class="modal-close" onclick="closePreview()">✕</button>
     </div>
-    <div id="preview-body" style="display:flex;justify-content:center;min-height:500px;background:#000;border-radius:10px;overflow:hidden">
-      <div class="loader" style="margin:auto"><div class="spinner" style="border-color:#fff3;border-top-color:#fff"></div></div>
-    </div>
-    <div style="margin-top:12px;display:flex;gap:8px;justify-content:space-between;align-items:center">
-      <span id="preview-vid-id" style="font-size:11px;color:#94a3b8;font-family:monospace"></span>
-      <a id="preview-tiktok-link" href="#" target="_blank" rel="noopener" class="btn btn-outline btn-sm">Buka di TikTok ↗</a>
+    <div id="preview-body" style="min-height:480px;border-radius:10px;overflow:hidden"></div>
+    <div style="margin-top:12px;text-align:center">
+      <a id="preview-tiktok-link" href="#" target="_blank" rel="noopener" class="btn btn-primary-sm" style="width:100%;display:block;text-align:center">
+        Tonton di TikTok ↗
+      </a>
     </div>
   </div>
 </div>
