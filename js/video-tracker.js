@@ -46,8 +46,9 @@ async function loadVideos() {
   if (profile?.role !== 'admin') q = q.eq('user_id', uid);
   if (produkId) q = q.eq('product_id', produkId);
 
-  const { data, error } = await q;
-  if (error) { showToast('Gagal load', 'error'); return; }
+  let data;
+  try { data = await fetchAllRows(q); }
+  catch(e) { showToast('Gagal load: ' + e.message, 'error'); return; }
 
   // Aggregate per video_id
   const vmap = {};
@@ -153,7 +154,7 @@ function renderVideos(videos) {
               <th>Orders</th>
               ${allBulan.map(b => `<th style="min-width:80px;text-align:center">${b.replace(' 20','<br>20')}</th>`).join('')}
               <th>Status</th>
-              <th>Aksi</th>
+              <th style="position:sticky;right:0;background:#f8f9fe;z-index:2;box-shadow:-2px 0 6px rgba(0,0,0,0.06)">Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -184,7 +185,7 @@ function renderVideos(videos) {
                 <td>${v.totalOrders}</td>
                 ${bulanCols}
                 <td>${decBadge}</td>
-                <td>
+                <td style="position:sticky;right:0;background:#fff;z-index:1;box-shadow:-2px 0 6px rgba(0,0,0,0.06)">
                   <button class="btn btn-primary-sm btn-sm" onclick="openDecisionModal('${v.vid}')">Keputusan</button>
                 </td>
               </tr>`;
@@ -201,12 +202,13 @@ function openDecisionModal(videoId) {
   const v = videoMap[videoId];
   if (!v) return;
 
+  const roas = v.totalCost > 0 ? v.totalRev / v.totalCost : 0;
   document.getElementById('modal-dec-title').textContent = 'Keputusan: ' + (v.title?.slice(0,30) || videoId);
   document.getElementById('modal-dec-info').innerHTML = `
     <div style="display:flex;gap:24px;flex-wrap:wrap">
       <div><div class="fw-600">${fmtRp(v.totalCost)}</div><div class="text-muted" style="font-size:11px">Total Spend</div></div>
       <div><div class="fw-600">${fmtRp(v.totalRev)}</div><div class="text-muted" style="font-size:11px">Total Revenue</div></div>
-      <div><div class="fw-600 ${roasClass(v.roas)}">${v.roas.toFixed(2)}x</div><div class="text-muted" style="font-size:11px">ROAS</div></div>
+      <div><div class="fw-600 ${roasClass(roas)}">${roas.toFixed(2)}x</div><div class="text-muted" style="font-size:11px">ROAS</div></div>
       <div><div class="fw-600">${v.account}</div><div class="text-muted" style="font-size:11px">Akun TikTok</div></div>
     </div>`;
 
