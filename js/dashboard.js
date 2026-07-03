@@ -1,8 +1,31 @@
 let profile = null;
-let allData = [];
 let products = [];
 let prodThresholds = {};
 let chartRevenue = null;
+
+const CACHE_TTL = 5 * 60 * 1000; // 5 menit
+
+function cacheKey(uid, bulan, produkId) {
+  return `gmv_dash_${uid}_${bulan || 'all'}_${produkId || 'all'}`;
+}
+
+function getCache(key) {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const { ts, data } = JSON.parse(raw);
+    if (Date.now() - ts > CACHE_TTL) { sessionStorage.removeItem(key); return null; }
+    return data;
+  } catch(_) { return null; }
+}
+
+function setCache(key, data) {
+  try { sessionStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch(_) {}
+}
+
+function clearDashCache() {
+  Object.keys(sessionStorage).filter(k => k.startsWith('gmv_dash_')).forEach(k => sessionStorage.removeItem(k));
+}
 
 (async () => {
   profile = await initPage('dashboard', 'Dashboard');
@@ -13,7 +36,7 @@ let chartRevenue = null;
 async function loadFilters() {
   const uid = (await getUser()).id;
 
-  // Load produk user
+  // Load produk
   let q = db().from('products').select('*').order('nama_produk');
   if (profile?.role !== 'admin') q = q.eq('user_id', uid);
   const { data: prods } = await q;
@@ -21,27 +44,23 @@ async function loadFilters() {
   products.forEach(p => {
     prodThresholds[p.id] = { high: p.roas_high ?? 3, mid: p.roas_mid ?? 1.5 };
   });
-
   const selProduk = document.getElementById('fil-produk');
   products.forEach(p => {
     const opt = document.createElement('option');
-    opt.value = p.id;
-    opt.textContent = p.nama_produk;
+    opt.value = p.id; opt.textContent = p.nama_produk;
     selProduk.appendChild(opt);
   });
 
-  // Load bulan — pakai fetchAllRows biar tidak kena limit 1000
-  let qb = db().from('ads_data').select('bulan').order('bulan');
-  if (profile?.role !== 'admin') qb = qb.eq('user_id', uid);
-  const bulanData = await fetchAllRows(qb);
+  // Load distinct bulan via RPC (cepat, tidak fetch semua row)
+  const { data: bulanRaw } = await db().rpc('get_distinct_bulan', { p_user_id: uid });
   const bulanOrder = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-  const bulanSet = [...new Set((bulanData || []).map(r => r.bulan).filter(Boolean))];
+  const bulanSet = (bulanRaw || []).map(r => r.bulan).filter(Boolean);
   bulanSet.sort((a, b) => {
     const parse = s => {
       const p = s.split(' ');
       return (parseInt(p[1]) || 0) * 100 + bulanOrder.indexOf(p[0]);
     };
-    return parse(b) - parse(a); // terbaru dulu
+    return parse(b) - parse(a);
   });
   const selBulan = document.getElementById('fil-bulan');
   bulanSet.forEach(b => {
@@ -50,156 +69,160 @@ async function loadFilters() {
     selBulan.appendChild(opt);
   });
 
+  // Default ke bulan terbaru
+  if (bulanSet.length > 0) selBulan.value = bulanSet[0];
+
   selBulan.addEventListener('change', loadDashboard);
   selProduk.addEventListener('change', loadDashboard);
 }
 
-async function loadDashboard() {
-  const uid = (await getUser()).id;
-  const bulan = document.getElementById('fil-bulan').value;
-  const produkId = document.getElementById('fil-produk').value;
+async function loadDashboard(forceRefresh = false) {
+  const uid      = (await getUser()).id;
+  const bulan    = document.getElementById('fil-bulan').value || null;
+  const produkId = document.getElementById('fil-produk').value || null;
+  const key      = cacheKey(uid, bulan, produkId);
 
-  let q = db().from('ads_data').select('*, products(nama_produk, product_id_tiktok)');
-  if (profile?.role !== 'admin') q = q.eq('user_id', uid);
-  if (bulan) q = q.eq('bulan', bulan);
-  if (produkId) q = q.eq('product_id', produkId);
-  // hanya yang ada spend
-  q = q.gt('cost', 0);
+  // Cek cache dulu
+  if (!forceRefresh) {
+    const cached = getCache(key);
+    if (cached) {
+      renderStats(cached.stats);
+      renderChart(cached.chart);
+      renderTopVideo(cached.topVids);
+      renderKillCandidates(cached.kills);
+      renderNeedCheck();
+      return;
+    }
+  }
 
-  let allData2;
-  try { allData2 = await fetchAllRows(q); }
-  catch(e) { showToast('Gagal load data: ' + e.message, 'error'); return; }
-  allData = allData2;
+  // Fetch dari Supabase — semua paralel
+  const [statsRes, topRes, chartRes, killRes] = await Promise.all([
+    db().rpc('get_dashboard_stats', { p_user_id: uid, p_bulan: bulan, p_product_id: produkId }),
+    db().rpc('get_top_videos',      { p_user_id: uid, p_bulan: bulan, p_product_id: produkId }),
+    db().rpc('get_bulan_chart',     { p_user_id: uid, p_product_id: produkId }),
+    db().rpc('get_kill_candidates', { p_user_id: uid, p_bulan: bulan, p_product_id: produkId }),
+  ]);
 
-  renderStats();
-  renderChart();
-  renderTopVideo();
+  const stats   = statsRes.data?.[0] || {};
+  const topVids = topRes.data || [];
+  const chart   = chartRes.data || [];
+  const kills   = killRes.data || [];
+
+  // Simpan ke cache
+  setCache(key, { stats, topVids, chart, kills });
+
+  renderStats(stats);
+  renderChart(chart);
+  renderTopVideo(topVids);
+  renderKillCandidates(kills);
   renderNeedCheck();
-  renderKillCandidates();
 }
 
-function renderStats() {
-  const totalSpend = allData.reduce((s, r) => s + (Number(r.cost) || 0), 0);
-  const totalRev = allData.reduce((s, r) => s + (Number(r.gross_revenue) || 0), 0);
-  const roas = totalSpend > 0 ? totalRev / totalSpend : 0;
+function renderStats(stats) {
+  const cost = Number(stats.total_cost) || 0;
+  const rev  = Number(stats.total_revenue) || 0;
+  const roas = cost > 0 ? rev / cost : 0;
 
-  // unique video id aktif (cost > 0 dan bukan N/A)
-  const videoSet = new Set(allData.filter(r => r.video_id && r.video_id !== 'N/A').map(r => r.video_id));
-
-  document.getElementById('stat-spend').textContent = fmtRp(totalSpend);
-  document.getElementById('stat-revenue').textContent = fmtRp(totalRev);
-  document.getElementById('stat-roas').textContent = roas.toFixed(2) + 'x';
-  document.getElementById('stat-video').textContent = videoSet.size;
+  document.getElementById('stat-spend').textContent   = fmtRp(cost);
+  document.getElementById('stat-revenue').textContent = fmtRp(rev);
+  document.getElementById('stat-roas').textContent    = roas.toFixed(2) + 'x';
+  document.getElementById('stat-video').textContent   = stats.video_count || 0;
 }
 
-function renderChart() {
-  // Group by bulan
-  const byBulan = {};
-  allData.forEach(r => {
-    if (!r.bulan) return;
-    if (!byBulan[r.bulan]) byBulan[r.bulan] = { cost: 0, rev: 0 };
-    byBulan[r.bulan].cost += Number(r.cost) || 0;
-    byBulan[r.bulan].rev += Number(r.gross_revenue) || 0;
+function renderChart(chart) {
+  const bulanOrder = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const sorted = [...chart].sort((a, b) => {
+    const parse = s => { const p = (s||'').split(' '); return (parseInt(p[1])||0)*100 + bulanOrder.indexOf(p[0]); };
+    return parse(a.bulan) - parse(b.bulan);
   });
 
-  const labels = Object.keys(byBulan).sort();
-  const costs = labels.map(b => byBulan[b].cost);
-  const revs = labels.map(b => byBulan[b].rev);
+  const labels = sorted.map(r => r.bulan);
+  const costs  = sorted.map(r => Number(r.total_cost) || 0);
+  const revs   = sorted.map(r => Number(r.total_revenue) || 0);
 
   const ctx = document.getElementById('chart-revenue').getContext('2d');
   if (chartRevenue) chartRevenue.destroy();
-
   chartRevenue = new Chart(ctx, {
     type: 'bar',
     data: {
       labels,
       datasets: [
-        {
-          label: 'Revenue',
-          data: revs,
-          backgroundColor: 'rgba(99,102,241,0.8)',
-          borderRadius: 6,
-          order: 1
-        },
-        {
-          label: 'Ads Spend',
-          data: costs,
-          backgroundColor: 'rgba(16,185,129,0.7)',
-          borderRadius: 6,
-          order: 2
-        }
+        { label: 'Revenue',   data: revs,  backgroundColor: 'rgba(99,102,241,0.8)', borderRadius: 6, order: 1 },
+        { label: 'Ads Spend', data: costs, backgroundColor: 'rgba(16,185,129,0.7)', borderRadius: 6, order: 2 }
       ]
     },
     options: {
       responsive: true,
       plugins: {
         legend: { position: 'bottom', labels: { font: { family: 'Plus Jakarta Sans', size: 12 } } },
-        tooltip: {
-          callbacks: {
-            label: ctx => ' ' + fmtRp(ctx.raw)
-          }
-        }
+        tooltip: { callbacks: { label: ctx => ' ' + fmtRp(ctx.raw) } }
       },
       scales: {
         y: {
           beginAtZero: true,
-          ticks: {
-            callback: v => fmtRp(v),
-            font: { family: 'Plus Jakarta Sans', size: 11 }
-          },
+          ticks: { callback: v => fmtRp(v), font: { family: 'Plus Jakarta Sans', size: 11 } },
           grid: { color: '#f1f5f9' }
         },
-        x: {
-          ticks: { font: { family: 'Plus Jakarta Sans', size: 11 } },
-          grid: { display: false }
-        }
+        x: { ticks: { font: { family: 'Plus Jakarta Sans', size: 11 } }, grid: { display: false } }
       }
     }
   });
 }
 
-function renderTopVideo() {
-  // Aggregate per video_id
-  const byVideo = {};
-  allData.filter(r => r.video_id && r.video_id !== 'N/A').forEach(r => {
-    const vid = r.video_id;
-    if (!byVideo[vid]) byVideo[vid] = { title: r.video_title || '-', account: r.tiktok_account || '-', product_id: r.product_id, cost: 0, rev: 0 };
-    byVideo[vid].cost += Number(r.cost) || 0;
-    byVideo[vid].rev += Number(r.gross_revenue) || 0;
-  });
-
-  const sorted = Object.entries(byVideo)
-    .map(([vid, d]) => ({ vid, ...d, roas: d.cost > 0 ? d.rev / d.cost : 0 }))
-    .sort((a, b) => b.roas - a.roas)
-    .slice(0, 5);
-
-  const numClasses = ['gold', 'silver', 'bronze', '', ''];
+function renderTopVideo(vids) {
   const list = document.getElementById('top-video-list');
-
-  if (!sorted.length) {
+  if (!vids.length) {
     list.innerHTML = '<li><div class="empty-state"><div class="icon">📭</div><p>Belum ada data</p></div></li>';
     return;
   }
-
-  list.innerHTML = sorted.map((v, i) => {
-    const thr = prodThresholds[v.product_id] || { high: 3, mid: 1.5 };
-    return `
-    <li>
+  const numClasses = ['gold','silver','bronze','',''];
+  list.innerHTML = vids.map((v, i) => {
+    const thr  = prodThresholds[v.product_id] || { high: 3, mid: 1.5 };
+    const roas = Number(v.roas) || 0;
+    const title = v.video_title && v.video_title !== '-' ? v.video_title.slice(0, 40) : 'Video ID: ' + (v.video_id || '').slice(-8);
+    return `<li>
       <div class="top-num ${numClasses[i]}">${String(i+1).padStart(2,'0')}</div>
       <div class="top-info">
-        <div class="vname">${v.title === '-' || !v.title ? 'Video ID: ' + v.vid.slice(-8) : v.title.slice(0,40)}</div>
-        <div class="vacct">${v.account}</div>
-        <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(100, v.roas / thr.high * 100)}%"></div></div>
+        <div class="vname">${title}</div>
+        <div class="vacct">${v.tiktok_account || '-'}</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(100, roas/thr.high*100)}%"></div></div>
       </div>
-      <div class="top-roas ${roasClass(v.roas, thr.high, thr.mid)}">${v.roas.toFixed(1)}x</div>
+      <div class="top-roas ${roasClass(roas, thr.high, thr.mid)}">${roas.toFixed(1)}x</div>
     </li>`;
   }).join('');
+}
+
+function renderKillCandidates(kills) {
+  const el = document.getElementById('kill-candidates');
+  if (!kills.length) {
+    el.innerHTML = '<div class="empty-state"><div class="icon">🎉</div><p>Tidak ada kandidat kill</p></div>';
+    return;
+  }
+  el.innerHTML = `
+    <table>
+      <thead><tr><th>Video</th><th>ROAS</th><th>Spend</th></tr></thead>
+      <tbody>
+        ${kills.map(v => {
+          const thr  = prodThresholds[v.product_id] || { high: 3, mid: 1.5 };
+          const roas = Number(v.roas) || 0;
+          const title = v.video_title && v.video_title !== '-' ? v.video_title.slice(0,30) : 'Video ID: '+(v.video_id||'').slice(-8);
+          return `<tr>
+            <td class="td-video">
+              <div class="vtitle">${title}</div>
+              <div class="vaccount">${v.tiktok_account || '-'}</div>
+            </td>
+            <td><span class="${roasClass(roas, thr.high, thr.mid)}">${roas.toFixed(2)}x</span></td>
+            <td><span class="text-muted">${fmtRp(v.total_cost)}</span></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
 }
 
 async function renderNeedCheck() {
   const uid = (await getUser()).id;
   let q = db().from('video_decisions')
-    .select('*, ads_data(video_title, tiktok_account, cost, gross_revenue)')
+    .select('*, ads_data(video_title, tiktok_account)')
     .eq('keputusan', 'scale')
     .is('hasil', null)
     .order('waktu_mulai', { ascending: false })
@@ -208,12 +231,10 @@ async function renderNeedCheck() {
 
   const { data } = await q;
   const list = document.getElementById('need-check-list');
-
   if (!data?.length) {
     list.innerHTML = '<div class="empty-state"><div class="icon">✅</div><p>Tidak ada yang perlu dicek</p></div>';
     return;
   }
-
   list.innerHTML = `
     <table>
       <thead><tr><th>Video</th><th>Di-scale</th><th>Aksi</th></tr></thead>
@@ -228,50 +249,6 @@ async function renderNeedCheck() {
             <td><span class="text-muted">${jam}j lalu</span></td>
             <td><a href="scale-kill.html" class="btn btn-monitor btn-sm">Cek</a></td>
           </tr>`;
-        }).join('')}
-      </tbody>
-    </table>`;
-}
-
-function renderKillCandidates() {
-  const byVideo = {};
-  allData.filter(r => r.video_id && r.video_id !== 'N/A' && Number(r.cost) > 0).forEach(r => {
-    const vid = r.video_id;
-    if (!byVideo[vid]) byVideo[vid] = { title: r.video_title || '-', account: r.tiktok_account || '-', product_id: r.product_id, cost: 0, rev: 0 };
-    byVideo[vid].cost += Number(r.cost) || 0;
-    byVideo[vid].rev += Number(r.gross_revenue) || 0;
-  });
-
-  const candidates = Object.entries(byVideo)
-    .map(([vid, d]) => ({ vid, ...d, roas: d.cost > 0 ? d.rev / d.cost : 0 }))
-    .filter(v => {
-      const thr = prodThresholds[v.product_id] || { high: 3, mid: 1.5 };
-      return v.roas < thr.mid && v.cost > 10000;
-    })
-    .sort((a, b) => a.roas - b.roas)
-    .slice(0, 5);
-
-  const el = document.getElementById('kill-candidates');
-
-  if (!candidates.length) {
-    el.innerHTML = '<div class="empty-state"><div class="icon">🎉</div><p>Tidak ada kandidat kill</p></div>';
-    return;
-  }
-
-  el.innerHTML = `
-    <table>
-      <thead><tr><th>Video</th><th>ROAS</th><th>Spend</th></tr></thead>
-      <tbody>
-        ${candidates.map(v => {
-          const thr = prodThresholds[v.product_id] || { high: 3, mid: 1.5 };
-          return `<tr>
-          <td class="td-video">
-            <div class="vtitle">${v.title === '-' ? 'Video ID: ' + v.vid.slice(-8) : v.title.slice(0,30)}</div>
-            <div class="vaccount">${v.account}</div>
-          </td>
-          <td><span class="${roasClass(v.roas, thr.high, thr.mid)}">${v.roas.toFixed(2)}x</span></td>
-          <td><span class="text-muted">${fmtRp(v.cost)}</span></td>
-        </tr>`;
         }).join('')}
       </tbody>
     </table>`;

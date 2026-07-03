@@ -32,12 +32,12 @@ async function loadFilters() {
     selProduk.appendChild(opt);
   });
 
-  // Isi filter bulan dari data existing — pakai fetchAllRows biar tidak kena limit 1000
-  let qb = db().from('ads_data').select('bulan').order('bulan');
+  // Isi filter bulan — ambil max 3000 row bulan saja (ringan)
+  let qb = db().from('ads_data').select('bulan').limit(3000);
   if (profile?.role !== 'admin') qb = qb.eq('user_id', uid);
-  const bd = await fetchAllRows(qb);
+  const { data: bulanRaw } = await qb;
   const bulanOrder = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-  const bulanSet = [...new Set((bd || []).map(r => r.bulan).filter(Boolean))];
+  const bulanSet = [...new Set((bulanRaw || []).map(r => r.bulan).filter(Boolean))];
   bulanSet.sort((a, b) => {
     const parse = s => {
       const p = s.split(' ');
@@ -407,6 +407,8 @@ async function doUpload() {
   if (errMsg) { showErr(errEl, 'Gagal upload: ' + errMsg); return; }
 
   showToast(`${parsedRows.length} data berhasil diupload!`, 'success');
+  // Invalidate dashboard cache
+  Object.keys(sessionStorage).filter(k => k.startsWith('gmv_dash_')).forEach(k => sessionStorage.removeItem(k));
   closeUpload();
 
   // Refresh filter bulan
