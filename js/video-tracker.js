@@ -209,10 +209,12 @@ function renderVideos(videos) {
     return;
   }
 
-  // Ambil semua bulan unik
+  // Ambil semua bulan unik — sort kronologis
+  const bulanOrder = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const parseBulan = s => { const p = (s||'').split(' '); return (parseInt(p[1])||0)*100 + bulanOrder.indexOf(p[0]); };
   const allBulan = [...new Set(
     videos.flatMap(v => Object.keys(v.bulanData))
-  )].sort();
+  )].sort((a, b) => parseBulan(a) - parseBulan(b));
 
   el.innerHTML = `
     <div class="card" style="padding:0;overflow:hidden">
@@ -226,7 +228,11 @@ function renderVideos(videos) {
               <th>Total Revenue</th>
               <th>ROAS</th>
               <th>Orders</th>
-              ${allBulan.map(b => `<th style="min-width:80px;text-align:center">${b.replace(' 20','<br>20')}</th>`).join('')}
+              ${allBulan.map(b => `
+                <th style="min-width:110px;text-align:center">
+                  ${b.replace(' 20','<br>20')}
+                  <div style="font-size:9px;font-weight:400;color:#94a3b8;margin-top:2px">Cost · Revenue · ROAS</div>
+                </th>`).join('')}
               <th>Keputusan</th>
               <th style="position:sticky;right:0;background:#f8f9fe;z-index:2;box-shadow:-2px 0 6px rgba(0,0,0,0.06)">Aksi</th>
             </tr>
@@ -242,13 +248,14 @@ function renderVideos(videos) {
                 const d = v.bulanData[b];
                 if (!d) return '<td style="text-align:center;color:#cbd5e1">-</td>';
                 const r = d.cost > 0 ? d.rev / d.cost : 0;
-                return `<td style="text-align:center">
+                return `<td style="text-align:center;padding:6px 8px">
+                  <div style="font-size:11px;color:#64748b">${fmtRp(d.cost)}</div>
+                  <div style="font-size:11px;color:#10b981;font-weight:600">${fmtRp(d.rev)}</div>
                   <div class="${roasClass(r, thr.high, thr.mid)} num" style="font-size:12px;font-weight:700">${r.toFixed(1)}x</div>
-                  <div style="font-size:10px;color:#94a3b8">${fmtRp(d.cost)}</div>
                 </td>`;
               }).join('');
 
-              return `<tr>
+              return `<tr style="border-top:1px solid #f1f5f9">
                 <td class="td-video" style="min-width:180px">
                   <div class="vtitle">${v.title && v.title !== '-' ? v.title.slice(0,40) : 'ID: '+v.vid.slice(-10)}</div>
                   <div class="vaccount">${v.account}</div>
@@ -281,6 +288,42 @@ function renderVideos(videos) {
               </tr>`;
             }).join('')}
           </tbody>
+          <tfoot>
+            <tr style="background:#f8f9fe;border-top:2px solid #e2e8f0;font-weight:700">
+              <td colspan="2" style="padding:10px 14px;font-size:13px;color:#475569">
+                TOTAL (${videos.length} video)
+              </td>
+              <td class="num" style="padding:10px 8px">
+                ${fmtRp(videos.reduce((s,v) => s + v.totalCost, 0))}
+              </td>
+              <td class="num" style="padding:10px 8px">
+                ${fmtRp(videos.reduce((s,v) => s + v.totalRev, 0))}
+              </td>
+              <td style="padding:10px 8px">
+                ${(() => {
+                  const tc = videos.reduce((s,v) => s + v.totalCost, 0);
+                  const tr = videos.reduce((s,v) => s + v.totalRev, 0);
+                  const r = tc > 0 ? tr/tc : 0;
+                  return `<span class="${roasClass(r)}" style="font-size:14px">${r.toFixed(2)}x</span>`;
+                })()}
+              </td>
+              <td style="padding:10px 8px">
+                ${videos.reduce((s,v) => s + v.totalOrders, 0).toLocaleString('id-ID')}
+              </td>
+              ${allBulan.map(b => {
+                const tc = videos.reduce((s,v) => s + (v.bulanData[b]?.cost||0), 0);
+                const tr = videos.reduce((s,v) => s + (v.bulanData[b]?.rev||0), 0);
+                const r = tc > 0 ? tr/tc : 0;
+                if (!tc) return '<td style="text-align:center;color:#cbd5e1;padding:10px 8px">-</td>';
+                return `<td style="text-align:center;padding:10px 8px">
+                  <div style="font-size:11px;color:#64748b">${fmtRp(tc)}</div>
+                  <div style="font-size:11px;color:#10b981;font-weight:600">${fmtRp(tr)}</div>
+                  <div class="${roasClass(r)}" style="font-size:12px;font-weight:700">${r.toFixed(1)}x</div>
+                </td>`;
+              }).join('')}
+              <td colspan="2" style="padding:10px 8px"></td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>`;
