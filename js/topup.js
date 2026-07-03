@@ -117,10 +117,12 @@ async function submitTopup() {
       btn.textContent = 'Mengirim notifikasi...';
       const approveLink = `${window.location.origin}/api/approve?id=${saved.id}&token=${approveToken}`;
       const pesan = buildWaMessage(profile?.nama || user.email, nominal, ext, approveLink);
+      // Support format lama (string) dan baru ({no, role})
+      const numbers = waTargets.map(t => t.no || t);
       await fetch('/api/topup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'notify', wa_targets: waTargets, message: pesan })
+        body: JSON.stringify({ action: 'notify', wa_targets: numbers, message: pesan })
       });
     }
 
