@@ -52,6 +52,7 @@ function handleFileSelected(file) {
     showToast('Screenshot terlalu besar, maksimal 4MB', 'error'); return;
   }
   selectedFile = file;
+  document.getElementById('tp-submit').disabled = false;
   const area = document.getElementById('ss-drop');
   const preview = document.getElementById('ss-preview');
   const reader = new FileReader();
@@ -194,6 +195,7 @@ function resetForm() {
   document.getElementById('ss-preview').src = '';
   document.getElementById('ss-placeholder').style.display = 'flex';
   document.getElementById('ss-filename').textContent = '';
+  document.getElementById('tp-submit').disabled = true;
 }
 
 // ── Load History ──
