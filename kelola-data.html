@@ -233,12 +233,17 @@ async function loadBulanan() {
 async function hapusBulanan(bulan) {
   if (!confirm(`Hapus semua data bulan "${bulan}"?\nData tidak bisa dikembalikan.`)) return;
   const uid = (await getUser()).id;
-  const { error } = await db().from('ads_data')
+  const { data: deleted, error } = await db().from('ads_data')
     .delete()
     .eq('bulan', bulan)
-    .eq('user_id', uid);
-  if (error) { showToast('Gagal hapus: ' + error.message, 'error'); return; }
-  showToast(`Data bulan "${bulan}" dihapus.`, 'success');
+    .eq('user_id', uid)
+    .select('id');
+  if (error) { showToast('Gagal: ' + error.message, 'error'); return; }
+  if (!deleted || deleted.length === 0) {
+    showToast('Tidak ada yang terhapus — jalankan SQL policy dulu di Supabase (lihat instruksi di halaman ini)', 'error');
+    return;
+  }
+  showToast(`${deleted.length} baris bulan "${bulan}" dihapus.`, 'success');
   await loadBulanan();
 }
 
@@ -315,12 +320,17 @@ async function hapusHarian(tanggal) {
   const dateDisp = new Date(tanggal + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
   if (!confirm(`Hapus semua data tanggal "${dateDisp}"?\nData tidak bisa dikembalikan.`)) return;
   const uid = (await getUser()).id;
-  const { error } = await db().from('ads_data_harian')
+  const { data: deleted, error } = await db().from('ads_data_harian')
     .delete()
     .eq('tanggal', tanggal)
-    .eq('user_id', uid);
-  if (error) { showToast('Gagal hapus: ' + error.message, 'error'); return; }
-  showToast(`Data tanggal "${dateDisp}" dihapus.`, 'success');
+    .eq('user_id', uid)
+    .select('id');
+  if (error) { showToast('Gagal: ' + error.message, 'error'); return; }
+  if (!deleted || deleted.length === 0) {
+    showToast('Tidak ada yang terhapus — jalankan SQL policy dulu di Supabase', 'error');
+    return;
+  }
+  showToast(`${deleted.length} baris tanggal "${dateDisp}" dihapus.`, 'success');
   await loadHarian();
 }
 </script>
