@@ -1,11 +1,27 @@
 let profile = null;
 let waTargets = [];
+let currentStatus = 'pending'; // default filter untuk admin
 
 (async () => {
   profile = await initPage('topup', 'Top Up Budget');
   await loadSettings();
+
+  if (profile?.role === 'admin') {
+    // Sembunyikan tab Request, rename tab Riwayat, langsung ke manajemen
+    const tabRequest = document.querySelector('.topup-tab[data-tab="request"]');
+    const tabRiwayat = document.querySelector('.topup-tab[data-tab="riwayat"]');
+    if (tabRequest) tabRequest.style.display = 'none';
+    if (tabRiwayat) {
+      tabRiwayat.textContent = 'Manajemen Top Up';
+      tabRiwayat.classList.add('active');
+    }
+    document.getElementById('panel-request').style.display = 'none';
+    document.getElementById('panel-riwayat').style.display = 'block';
+    document.getElementById('status-filter').style.display = 'block';
+  }
+
   await loadHistory();
-  setupUploadArea();
+  if (profile?.role !== 'admin') setupUploadArea();
 })();
 
 // ── Load WA targets dari app_settings ──
@@ -21,6 +37,15 @@ function switchTab(tab) {
   document.querySelector(`.topup-tab[data-tab="${tab}"]`).classList.add('active');
   document.getElementById('panel-' + tab).style.display = 'block';
   if (tab === 'riwayat') loadHistory();
+}
+
+// ── Status filter (admin) ──
+function switchStatus(status) {
+  currentStatus = status;
+  document.querySelectorAll('.status-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.status === status);
+  });
+  loadHistory();
 }
 
 // ── File upload drag & drop ──
@@ -204,17 +229,22 @@ async function loadHistory() {
   el.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
 
   const user = await getUser();
+  const isAdmin = profile?.role === 'admin';
+
   let q = db().from('topup_requests').select('*').order('created_at', { ascending: false });
-  if (profile?.role !== 'admin') q = q.eq('user_id', user.id);
+  if (!isAdmin) q = q.eq('user_id', user.id);
+  if (isAdmin && currentStatus) q = q.eq('status', currentStatus);
 
   const { data, error } = await q;
   if (error) { el.innerHTML = `<div class="empty-state"><p>${error.message}</p></div>`; return; }
   if (!data?.length) {
-    el.innerHTML = '<div class="empty-state"><div class="icon">💳</div><h3>Belum ada request</h3><p>Request top up pertama kamu akan muncul di sini.</p></div>';
+    const emptyMsg = isAdmin && currentStatus === 'pending'
+      ? '<h3>Tidak ada request pending</h3><p>Semua request sudah ditangani.</p>'
+      : '<h3>Belum ada request</h3><p>Request top up akan muncul di sini.</p>';
+    el.innerHTML = `<div class="empty-state"><div class="icon">💳</div>${emptyMsg}</div>`;
     return;
   }
 
-  const isAdmin = profile?.role === 'admin';
   el.innerHTML = data.map(r => renderHistoryCard(r, isAdmin)).join('');
 }
 
