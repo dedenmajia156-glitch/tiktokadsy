@@ -225,28 +225,33 @@
   // ── Load advertiser dari Supabase ─────────────────────────
   async function loadAdvertisers() {
     try {
-      // Cek apakah user adalah admin
       const user = await getUser();
-      if (!user) return;
+      if (!user) { console.log('[AdvSW] no user'); return; }
 
       // Fetch profile diri sendiri
-      const { data: myProfile } = await db().from('profiles').select('role').eq('id', user.id).single();
-      if (myProfile?.role !== 'admin') return; // bukan admin, jangan tampilkan
+      const { data: myProfile, error: profErr } = await db()
+        .from('profiles').select('role').eq('id', user.id).single();
+      console.log('[AdvSW] my profile:', myProfile, profErr);
+      if (myProfile?.role !== 'admin') return; // bukan admin
 
-      // Fetch semua advertiser + email dari auth.users via profiles
-      const { data: advs } = await db()
+      // Fetch semua profiles kecuali diri sendiri dan admin
+      const { data: advs, error: advErr } = await db()
         .from('profiles')
         .select('id, nama, role, no_wa')
-        .eq('role', 'advertiser')
+        .neq('id', user.id)          // kecualikan diri sendiri
+        .neq('role', 'admin')        // kecualikan admin lain
         .order('nama');
 
-      if (!advs?.length) return;
+      console.log('[AdvSW] advertisers:', advs, advErr);
+      if (!advs?.length) {
+        console.log('[AdvSW] no advertisers found — cek RLS policy di profiles table');
+        return;
+      }
 
-      // Fetch emails (stored di profiles atau dari auth — pakai no_wa sebagai fallback label)
       allAdvertisers = advs.map(a => ({
         id:    a.id,
         nama:  a.nama || 'Tanpa Nama',
-        email: a.no_wa ? `WA: ${a.no_wa}` : 'Advertiser'
+        email: a.no_wa ? `📱 ${a.no_wa}` : 'Advertiser'
       }));
 
       // Reset filter kalau advertiser yang dipilih sudah tidak ada
