@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="img/logo-adsy.png">
+<title>Tracker Harian — GMV MAX Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/nav.js"></script>
+</head>
+<body>
+<div class="app-wrap">
+  <div id="sidebar-container"></div>
+  <div class="main-content">
+    <div id="topbar-container"></div>
+    <div class="page-content">
+
+      <div class="page-header">
+        <div>
+          <h2>📅 Video Tracker Harian</h2>
+          <p>Performa video per hari — lihat naik/turun vs kemarin</p>
+        </div>
+        <button class="btn btn-primary-sm" onclick="openUploadModal()">📤 Upload Harian</button>
+      </div>
+
+      <!-- Filter -->
+      <div class="filter-bar">
+        <label>Produk:</label>
+        <select id="fil-produk"><option value="">Semua Produk</option></select>
+        <label>Dari:</label>
+        <input type="date" id="fil-date-from" style="width:140px">
+        <label>Sampai:</label>
+        <input type="date" id="fil-date-to" style="width:140px">
+        <button class="btn btn-primary-sm" id="btn-load">Tampilkan</button>
+        <label>Status:</label>
+        <select id="fil-roas-status">
+          <option value="">Semua</option>
+          <option value="bagus">Bagus</option>
+          <option value="monitor">Monitor</option>
+          <option value="boncos">Boncos</option>
+        </select>
+        <input type="text" id="fil-search" placeholder="🔍 Cari video / akun..." style="width:190px">
+      </div>
+
+      <div id="video-list">
+        <div class="loader"><div class="spinner"></div></div>
+      </div>
+
+      <div id="harian-pagination" style="display:none;margin-top:12px;padding:12px 16px;background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.07);align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div id="hp-info" style="font-size:13px;color:#64748b"></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="btn btn-outline btn-sm" id="hp-prev" onclick="vtHarianChangePage(-1)">← Prev</button>
+          <div id="hp-nums" style="display:flex;gap:4px"></div>
+          <button class="btn btn-outline btn-sm" id="hp-next" onclick="vtHarianChangePage(1)">Next →</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Modal Upload Harian -->
+<div class="modal-overlay" id="modal-upload-h">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <div class="modal-title">📤 Upload Data Harian</div>
+      <button class="modal-close" onclick="closeUploadModal()">✕</button>
+    </div>
+
+    <div class="upload-area" id="upload-area-h" onclick="document.getElementById('file-input-h').click()">
+      <div class="upload-icon">📊</div>
+      <h3>Klik atau drag file Excel di sini</h3>
+      <p>File export harian dari TikTok Seller Center (.xlsx)</p>
+      <p style="margin-top:6px;font-size:12px;color:#94a3b8">Tanggal otomatis terbaca dari nama file</p>
+    </div>
+    <input type="file" id="file-input-h" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFileHarian(this.files[0])">
+
+    <!-- Tanggal override -->
+    <div style="margin-top:14px">
+      <label style="font-size:13px;font-weight:600;color:#1e293b;display:block;margin-bottom:6px">
+        Tanggal Data
+        <span style="font-weight:400;color:#94a3b8;font-size:12px"> — otomatis dari nama file, bisa ubah manual</span>
+      </label>
+      <input type="date" id="upload-tanggal" style="border:1.5px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none;width:180px">
+    </div>
+
+    <div id="preview-info-h" style="display:none;margin-top:12px">
+      <div class="card" style="padding:14px;background:#f8f9ff;box-shadow:none;border:1.5px solid #e0e7ff">
+        <div id="preview-text-h" style="font-size:13px"></div>
+      </div>
+    </div>
+
+    <div class="auth-err" id="upload-err-h"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeUploadModal()">Batal</button>
+      <button class="btn btn-primary-sm" id="btn-upload-h" onclick="doUploadHarian()" disabled>Upload Data</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="js/video-tracker-harian.js"></script>
+</body>
+</html>
