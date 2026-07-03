@@ -26,6 +26,22 @@
       </div>
 
       <div style="max-width:520px">
+
+        <!-- WA Notif Settings (admin only) -->
+        <div class="card mb-16" id="card-wa-settings" style="display:none">
+          <div class="card-header">
+            <div class="card-title">📱 Notifikasi Top Up (WA)</div>
+          </div>
+          <p style="font-size:13px;color:#64748b;margin-bottom:16px">Nomor WA yang akan menerima notifikasi setiap ada request top up baru.</p>
+          <div id="wa-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
+          <div style="display:flex;gap:8px">
+            <input type="tel" id="wa-new" placeholder="Contoh: 08123456789" style="flex:1" />
+            <button class="btn btn-primary-sm" onclick="addWaTarget()">+ Tambah</button>
+          </div>
+          <div class="auth-err" id="wa-err" style="margin-top:8px"></div>
+          <div class="auth-ok" id="wa-ok" style="margin-top:8px"></div>
+        </div>
+
         <!-- Profil -->
         <div class="card mb-16">
           <div class="card-header">
@@ -79,6 +95,8 @@
 
 <div id="toast-container"></div>
 <script>
+let _waTargets = [];
+
 (async () => {
   const prof = await initPage('settings', 'Settings');
   const user = await getUser();
@@ -90,8 +108,60 @@
     document.getElementById('big-avatar').textContent = (prof.nama || 'U')[0].toUpperCase();
     document.getElementById('s-nama').value = prof.nama || '';
     document.getElementById('s-wa').value = prof.no_wa || '';
+
+    if (prof.role === 'admin') {
+      document.getElementById('card-wa-settings').style.display = 'block';
+      loadWaTargets();
+    }
   }
 })();
+
+async function loadWaTargets() {
+  const { data } = await db().from('app_settings').select('value').eq('key', 'topup_wa_targets').single();
+  _waTargets = data?.value || [];
+  renderWaList();
+}
+
+function renderWaList() {
+  const el = document.getElementById('wa-list');
+  if (!_waTargets.length) {
+    el.innerHTML = '<div style="font-size:13px;color:#94a3b8">Belum ada nomor penerima notifikasi.</div>';
+    return;
+  }
+  el.innerHTML = _waTargets.map((num, i) => `
+    <div style="display:flex;align-items:center;gap:8px;background:#f8fafc;border-radius:8px;padding:8px 12px">
+      <span style="font-size:13px;flex:1">📱 ${num}</span>
+      <button onclick="removeWaTarget(${i})" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:16px;line-height:1">×</button>
+    </div>`).join('');
+}
+
+async function addWaTarget() {
+  let num = document.getElementById('wa-new').value.trim().replace(/\D/g,'');
+  const errEl = document.getElementById('wa-err');
+  errEl.style.display = 'none';
+  if (!num || num.length < 8) { errEl.textContent = 'Nomor WA tidak valid.'; errEl.style.display = 'block'; return; }
+  if (num.startsWith('0')) num = '62' + num.slice(1);
+  if (_waTargets.includes(num)) { errEl.textContent = 'Nomor sudah ada.'; errEl.style.display = 'block'; return; }
+  _waTargets.push(num);
+  await saveWaTargets();
+  document.getElementById('wa-new').value = '';
+}
+
+async function removeWaTarget(idx) {
+  _waTargets.splice(idx, 1);
+  await saveWaTargets();
+}
+
+async function saveWaTargets() {
+  const { error } = await db().from('app_settings')
+    .upsert({ key: 'topup_wa_targets', value: _waTargets, updated_at: new Date().toISOString() });
+  if (error) { showToast('Gagal menyimpan: ' + error.message, 'error'); return; }
+  renderWaList();
+  const ok = document.getElementById('wa-ok');
+  ok.textContent = 'Tersimpan!'; ok.style.display = 'block';
+  setTimeout(() => ok.style.display = 'none', 2000);
+  showToast('Nomor WA diperbarui!', 'success');
+}
 
 async function saveProfile() {
   const nama = document.getElementById('s-nama').value.trim();
