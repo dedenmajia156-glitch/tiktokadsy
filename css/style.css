@@ -552,6 +552,22 @@ body {
 .table-wrap {
   overflow-x: auto;
   border-radius: var(--radius-sm);
+  scrollbar-width: thin;
+  scrollbar-color: #c7d2fe #f1f5f9;
+}
+.table-wrap::-webkit-scrollbar {
+  height: 6px;
+}
+.table-wrap::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+.table-wrap::-webkit-scrollbar-thumb {
+  background: #c7d2fe;
+  border-radius: 10px;
+}
+.table-wrap::-webkit-scrollbar-thumb:hover {
+  background: #6366f1;
 }
 
 table {
