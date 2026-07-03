@@ -100,12 +100,14 @@ async function submitTopup() {
 
     // 3. Simpan ke DB
     btn.textContent = 'Menyimpan request...';
+    const approveToken = crypto.randomUUID();
     const { data: saved, error: dbErr } = await db().from('topup_requests').insert({
       user_id: user.id,
       user_name: profile?.nama || user.email,
       nominal,
       extracted_data: ext,
-      status: 'pending'
+      status: 'pending',
+      approve_token: approveToken
     }).select().single();
 
     if (dbErr) throw new Error(dbErr.message);
@@ -113,7 +115,8 @@ async function submitTopup() {
     // 4. Kirim notif WA
     if (waTargets.length) {
       btn.textContent = 'Mengirim notifikasi...';
-      const pesan = buildWaMessage(profile?.nama || user.email, nominal, ext);
+      const approveLink = `${window.location.origin}/api/approve?id=${saved.id}&token=${approveToken}`;
+      const pesan = buildWaMessage(profile?.nama || user.email, nominal, ext, approveLink);
       await fetch('/api/topup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -133,21 +136,25 @@ async function submitTopup() {
   }
 }
 
-function buildWaMessage(nama, nominal, ext) {
+function buildWaMessage(nama, nominal, ext, approveLink) {
   const fmtNum = n => n != null ? Number(n).toLocaleString('id-ID') : '-';
   const lines = [
     `🔔 *Top Up Request — GMV Tracker*`,
     ``,
     `👤 *${nama}* minta top up:`,
     `💰 *Nominal: Rp ${fmtNum(nominal)}*`,
+    `*(copy: ${nominal})*`,
     ``,
     `📊 Hasil dari Screenshot:`,
-    ext.shop_name  ? `• Toko: ${ext.shop_name}` : null,
-    ext.period     ? `• Periode: ${ext.period}` : null,
-    ext.cost != null ? `• Cost: Rp ${fmtNum(ext.cost)}` : null,
-    ext.sku_orders != null ? `• SKU Orders: ${fmtNum(ext.sku_orders)}` : null,
+    ext.shop_name        ? `• Toko: ${ext.shop_name}` : null,
+    ext.period           ? `• Periode: ${ext.period}` : null,
+    ext.cost        != null ? `• Cost: Rp ${fmtNum(ext.cost)}` : null,
+    ext.sku_orders  != null ? `• SKU Orders: ${fmtNum(ext.sku_orders)}` : null,
     ext.gross_revenue != null ? `• Gross Revenue: Rp ${fmtNum(ext.gross_revenue)}` : null,
-    ext.roi != null ? `• ROI: ${Number(ext.roi).toFixed(2)}x` : null,
+    ext.roi         != null ? `• ROI: ${Number(ext.roi).toFixed(2)}x` : null,
+    ``,
+    `✅ *Approve request ini:*`,
+    approveLink,
     ``,
     `_${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}_`
   ].filter(l => l !== null);
