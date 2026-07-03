@@ -67,6 +67,23 @@
 
   .mb-12 { margin-bottom:12px; }
   .badge-orange { background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; }
+
+  /* Status filter tabs */
+  .status-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
+  .status-tab {
+    padding:6px 16px;
+    border-radius:20px;
+    border:1.5px solid #e2e8f0;
+    background:#fff;
+    font-size:12px;
+    font-weight:600;
+    color:#64748b;
+    cursor:pointer;
+    transition:all .18s;
+    font-family:inherit;
+  }
+  .status-tab:hover { border-color:var(--primary); color:var(--primary); }
+  .status-tab.active { background:var(--primary); border-color:var(--primary); color:#fff; }
 </style>
 </head>
 <body>
@@ -131,8 +148,17 @@
         <div id="tp-success"></div>
       </div>
 
-      <!-- Panel: Riwayat -->
+      <!-- Panel: Riwayat / Manajemen -->
       <div id="panel-riwayat" class="topup-panel" style="display:none">
+        <!-- Status filter (admin only, shown via JS) -->
+        <div id="status-filter" style="display:none">
+          <div class="status-tabs">
+            <button class="status-tab active" data-status="pending" onclick="switchStatus('pending')">⏳ Pending</button>
+            <button class="status-tab" data-status="approved" onclick="switchStatus('approved')">✅ Disetujui</button>
+            <button class="status-tab" data-status="rejected" onclick="switchStatus('rejected')">❌ Ditolak</button>
+            <button class="status-tab" data-status="" onclick="switchStatus('')">📋 Semua</button>
+          </div>
+        </div>
         <div id="history-list">
           <div class="loader"><div class="spinner"></div></div>
         </div>
