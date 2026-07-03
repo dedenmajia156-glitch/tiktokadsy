@@ -72,6 +72,20 @@ Semua angka dalam number (tanpa Rp, tanpa titik/koma pemisah ribuan). Field tida
     }
   }
 
+  // ── Shorten URL via TinyURL (gratis, no key) ──
+  if (action === 'shorten') {
+    const { url } = req.body;
+    if (!url) return res.status(400).json({ error: 'url required' });
+    try {
+      const r = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(url)}`);
+      if (!r.ok) throw new Error('TinyURL error');
+      const short = await r.text();
+      return res.json({ ok: true, short_url: short.trim() });
+    } catch (e) {
+      return res.json({ ok: true, short_url: url, fallback: true });
+    }
+  }
+
   // ── Kirim notif WA via Fonnte ──
   if (action === 'notify') {
     const { wa_targets, message } = req.body;
