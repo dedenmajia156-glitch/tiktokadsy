@@ -217,7 +217,7 @@ function renderVideos(videos) {
   )].sort((a, b) => parseBulan(a) - parseBulan(b));
 
   el.innerHTML = `
-    <div class="card" style="padding:0;overflow:hidden">
+    <div class="card" style="padding:0">
       <div class="table-wrap">
         <table>
           <thead>
