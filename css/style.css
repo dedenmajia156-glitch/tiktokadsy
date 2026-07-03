@@ -354,8 +354,8 @@ body {
 /* ---- HEADER ---- */
 .topbar {
   background: var(--white);
-  padding: 0 28px;
-  height: 64px;
+  padding: 0 20px;
+  height: 52px;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -366,7 +366,7 @@ body {
 }
 
 .topbar-title {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--text);
   flex: 1;
@@ -451,7 +451,7 @@ body {
 .user-info .role { font-size: 11px; color: var(--text-muted); }
 
 /* ---- PAGE CONTENT ---- */
-.page-content { padding: 28px; flex: 1; }
+.page-content { padding: 20px 24px; flex: 1; }
 
 .page-header {
   display: flex;
@@ -476,20 +476,20 @@ body {
 .stat-card {
   background: var(--white);
   border-radius: var(--radius);
-  padding: 20px;
+  padding: 14px 16px;
   box-shadow: var(--card-shadow);
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .stat-icon {
-  width: 50px; height: 50px;
-  border-radius: 12px;
+  width: 42px; height: 42px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: 18px;
   flex-shrink: 0;
 }
 
@@ -507,15 +507,15 @@ body {
 .stat-card.blue   { background: linear-gradient(135deg, #eff6ff, #dbeafe); border: none; }
 
 .stat-info .value {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--text);
   line-height: 1;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .stat-info .label {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
   font-weight: 500;
 }
