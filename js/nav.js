@@ -6,6 +6,7 @@ const NAV_ICONS = {
   'video-tracker': ic(`<polygon points='23 7 16 12 23 17 23 7'/><rect x='1' y='5' width='15' height='14' rx='2' ry='2'/>`),
   'tracker-harian': ic(`<rect x='3' y='4' width='18' height='18' rx='2'/><line x1='16' y1='2' x2='16' y2='6'/><line x1='8' y1='2' x2='8' y2='6'/><line x1='3' y1='10' x2='21' y2='10'/><polyline points='8 14 10 16 14 13'/>`),
   'kelola-data':    ic(`<path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/><polyline points='14 2 14 8 20 8'/><line x1='9' y1='15' x2='15' y2='15'/><line x1='12' y1='12' x2='12' y2='18'/>`),
+  'topup':          ic(`<rect x='1' y='4' width='22' height='16' rx='2'/><line x1='1' y1='10' x2='23' y2='10'/><line x1='7' y1='15' x2='11' y2='15'/><line x1='15' y1='15' x2='17' y2='15'/>`),
   'scale-kill':  ic(`<polyline points='22 7 13.5 15.5 8.5 10.5 2 17'/><polyline points='16 7 22 7 22 13'/>`),
   produk:        ic(`<path d='m7.5 4.27 9 5.15'/><path d='M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z'/><path d='m3.3 7 8.7 5 8.7-5'/><path d='M12 22V12'/>`),
   users:         ic(`<path d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'/><circle cx='9' cy='7' r='4'/><path d='M22 21v-2a4 4 0 0 0-3-3.87'/><path d='M16 3.13a4 4 0 0 1 0 7.75'/>`),
@@ -46,6 +47,9 @@ function renderNav(activePage, pageTitle) {
 
       <a href="kelola-data.html" class="nav-link" data-page="kelola-data">
         <span class="icon">${NAV_ICONS['kelola-data']}</span> Kelola Data
+      </a>
+      <a href="topup.html" class="nav-link" data-page="topup">
+        <span class="icon">${NAV_ICONS['topup']}</span> Top Up
       </a>
 
       <div class="nav-section-title" style="margin-top:8px">Pengaturan</div>
