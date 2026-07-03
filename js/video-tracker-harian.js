@@ -15,10 +15,23 @@ const PAGE_SIZE = 15;
   await loadData();
 })();
 
-async function loadProducts() {
+window.addEventListener('advertiserSwitch', async () => {
+  document.getElementById('fil-produk').innerHTML = '<option value="">Semua Produk</option>';
+  userProducts = [];
+  prodThresholds = {};
+  await loadProducts();
+  await loadData();
+});
+
+async function getTargetUid() {
   const uid = (await getUser()).id;
+  return window.__activeAdvertiser || uid;
+}
+
+async function loadProducts() {
+  const uid = await getTargetUid();
   let q = db().from('products').select('*').order('nama_produk');
-  if (profile?.role !== 'admin') q = q.eq('user_id', uid);
+  if (profile?.role !== 'admin' || window.__activeAdvertiser) q = q.eq('user_id', uid);
   const { data: prods } = await q;
   userProducts = prods || [];
   userProducts.forEach(p => {
@@ -56,7 +69,7 @@ function setupFilters() {
 }
 
 async function loadData() {
-  const uid = (await getUser()).id;
+  const uid = await getTargetUid();
   const produkId = document.getElementById('fil-produk').value;
   const dateFrom = document.getElementById('fil-date-from').value;
   const dateTo = document.getElementById('fil-date-to').value;
@@ -77,7 +90,7 @@ async function loadData() {
       .lte('tanggal', dateTo)
       .order('tanggal', { ascending: true });
 
-    if (profile?.role !== 'admin') q = q.eq('user_id', uid);
+    if (profile?.role !== 'admin' || window.__activeAdvertiser) q = q.eq('user_id', uid);
     if (produkId) q = q.eq('product_id', produkId);
 
     allData = await fetchAllRows(q);
@@ -545,6 +558,7 @@ async function doUploadHarian() {
   if (errMsg) { showErrH(errEl, 'Gagal upload: ' + errMsg); return; }
 
   showToast(`${parsedRows.length} data harian (${tanggal}) berhasil diupload!`, 'success');
+  Object.keys(sessionStorage).filter(k => k.startsWith('gmv_dash_') || k.startsWith('gmv_chart_')).forEach(k => sessionStorage.removeItem(k));
   closeUploadModal();
   await loadData();
 }

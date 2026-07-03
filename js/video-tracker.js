@@ -13,10 +13,26 @@ let vtPage = 0;
   setupFilters();
 })();
 
-async function loadFilters() {
+// Re-load ketika admin ganti advertiser
+window.addEventListener('advertiserSwitch', async () => {
+  document.getElementById('fil-produk').innerHTML = '<option value="">Semua Produk</option>';
+  prodThresholds = {};
+  prodTiktokId = {};
+  vtPage = 0;
+  await loadFilters();
+  await loadVideos();
+});
+
+// Pakai advertiser yang dipilih (admin), atau user sendiri
+async function getTargetUid() {
   const uid = (await getUser()).id;
+  return window.__activeAdvertiser || uid;
+}
+
+async function loadFilters() {
+  const uid = await getTargetUid();
   let q = db().from('products').select('*').order('nama_produk');
-  if (profile?.role !== 'admin') q = q.eq('user_id', uid);
+  if (profile?.role !== 'admin' || window.__activeAdvertiser) q = q.eq('user_id', uid);
   const { data: prods } = await q;
 
   const sel = document.getElementById('fil-produk');
@@ -44,7 +60,7 @@ function setupFilters() {
 }
 
 async function loadVideos() {
-  const uid = (await getUser()).id;
+  const uid = await getTargetUid();
   const produkId  = document.getElementById('fil-produk').value;
   const search    = document.getElementById('fil-search').value.toLowerCase();
   const sort      = document.getElementById('fil-sort').value;
@@ -57,7 +73,7 @@ async function loadVideos() {
     .neq('video_id', 'N/A')
     .gt('cost', 0);
 
-  if (profile?.role !== 'admin') q = q.eq('user_id', uid);
+  if (profile?.role !== 'admin' || window.__activeAdvertiser) q = q.eq('user_id', uid);
   if (produkId) q = q.eq('product_id', produkId);
 
   let data;

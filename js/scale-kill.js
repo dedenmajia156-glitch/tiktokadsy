@@ -8,6 +8,13 @@ let allDecisions = [];
   await loadDecisions();
 })();
 
+window.addEventListener('advertiserSwitch', () => loadDecisions());
+
+async function getTargetUid() {
+  const uid = (await getUser()).id;
+  return window.__activeAdvertiser || uid;
+}
+
 function switchTab(tab) {
   currentTab = tab;
   document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -17,13 +24,13 @@ function switchTab(tab) {
 }
 
 async function loadDecisions() {
-  const uid = (await getUser()).id;
+  const uid = await getTargetUid();
 
   let q = db().from('video_decisions')
     .select('*, ads_data!inner(video_title, tiktok_account, cost, gross_revenue, bulan, products(nama_produk))')
     .order('created_at', { ascending: false });
 
-  if (profile?.role !== 'admin') q = q.eq('user_id', uid);
+  if (profile?.role !== 'admin' || window.__activeAdvertiser) q = q.eq('user_id', uid);
 
   const { data, error } = await q;
 
@@ -32,7 +39,7 @@ async function loadDecisions() {
     let q2 = db().from('video_decisions')
       .select('*')
       .order('created_at', { ascending: false });
-    if (profile?.role !== 'admin') q2 = q2.eq('user_id', uid);
+    if (profile?.role !== 'admin' || window.__activeAdvertiser) q2 = q2.eq('user_id', uid);
     const { data: d2 } = await q2;
     allDecisions = d2 || [];
   } else {

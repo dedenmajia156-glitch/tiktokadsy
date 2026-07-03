@@ -12,12 +12,26 @@ let totalRows = 0;
   setupFilters();
 })();
 
-async function loadFilters() {
+window.addEventListener('advertiserSwitch', async () => {
+  document.getElementById('fil-produk').innerHTML = '<option value="">Semua Produk</option>';
+  document.getElementById('fil-bulan').innerHTML  = '<option value="">Semua Bulan</option>';
+  userProducts = [];
+  prodThresholds = {};
+  await loadFilters();
+  await loadData();
+});
+
+async function getTargetUid() {
   const uid = (await getUser()).id;
+  return window.__activeAdvertiser || uid;
+}
+
+async function loadFilters() {
+  const uid = await getTargetUid();
 
   // Load produk user → untuk filter & auto-match saat upload
   let q = db().from('products').select('*').order('nama_produk');
-  if (profile?.role !== 'admin') q = q.eq('user_id', uid);
+  if (profile?.role !== 'admin' || window.__activeAdvertiser) q = q.eq('user_id', uid);
   const { data: prods } = await q;
   userProducts = prods || [];
   userProducts.forEach(p => {
@@ -68,7 +82,7 @@ function changePage(dir) {
 }
 
 async function loadData() {
-  const uid      = (await getUser()).id;
+  const uid      = await getTargetUid();
   const bulan    = document.getElementById('fil-bulan').value;
   const produkId = document.getElementById('fil-produk').value;
   const creative = document.getElementById('fil-creative').value;
@@ -84,7 +98,7 @@ async function loadData() {
     } else {
       q = q.select('*, products(nama_produk)').order('gross_revenue', { ascending: false }).range(from, to);
     }
-    if (profile?.role !== 'admin') q = q.eq('user_id', uid);
+    if (profile?.role !== 'admin' || window.__activeAdvertiser) q = q.eq('user_id', uid);
     if (bulan)    q = q.eq('bulan', bulan);
     if (produkId) q = q.eq('product_id', produkId);
     if (creative) q = q.eq('creative_type', creative);
