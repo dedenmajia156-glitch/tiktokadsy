@@ -174,8 +174,9 @@ async function loadBulanan() {
     // Group by bulan
     const map = {};
     rows.forEach(r => {
-      const b = r.bulan || '—';
-      if (!map[b]) map[b] = { bulan: b, totalRows: 0, totalCost: 0, totalRev: 0, totalOrders: 0, videoSet: new Set() };
+      const b = r.bulan || '(Tanpa Bulan)';
+      const realBulan = r.bulan ?? null; // nilai asli, bisa null
+      if (!map[b]) map[b] = { bulan: b, realBulan, totalRows: 0, totalCost: 0, totalRev: 0, totalOrders: 0, videoSet: new Set() };
       map[b].totalRows++;
       map[b].totalCost += r.cost || 0;
       map[b].totalRev += r.gross_revenue || 0;
@@ -221,7 +222,7 @@ async function loadBulanan() {
           </div>
         </div>
         <div class="dc-actions">
-          <button class="btn-hapus" onclick="hapusBulanan('${d.bulan}')">🗑 Hapus Data</button>
+          <button class="btn-hapus" onclick="hapusBulanan(${JSON.stringify(d.realBulan)})">🗑 Hapus Data</button>
         </div>
       </div>
     `).join('');
@@ -230,20 +231,27 @@ async function loadBulanan() {
   }
 }
 
-async function hapusBulanan(bulan) {
-  if (!confirm(`Hapus semua data bulan "${bulan}"?\nData tidak bisa dikembalikan.`)) return;
+async function hapusBulanan(realBulan) {
+  const label = realBulan || '(Tanpa Bulan)';
+  if (!confirm(`Hapus semua data bulan "${label}"?\nData tidak bisa dikembalikan.`)) return;
   const uid = (await getUser()).id;
-  console.log('UID login:', uid, '| role:', profile?.role, '| bulan:', bulan);
-  let dq = db().from('ads_data').delete().eq('bulan', bulan);
+
+  let dq = db().from('ads_data').delete();
+  // Gunakan nilai asli: null pakai .is(), string pakai .eq()
+  if (realBulan === null || realBulan === undefined) {
+    dq = dq.is('bulan', null);
+  } else {
+    dq = dq.eq('bulan', realBulan);
+  }
   if (profile?.role !== 'admin') dq = dq.eq('user_id', uid);
+
   const { data: deleted, error } = await dq.select('id');
-  console.log('Result:', { deleted, error });
   if (error) { showToast('Gagal: ' + error.message, 'error'); return; }
   if (!deleted || deleted.length === 0) {
-    showToast('UID kamu: ' + uid + ' | Cek console browser (F12)', 'error');
+    showToast('Tidak ada yang terhapus.', 'error');
     return;
   }
-  showToast(`${deleted.length} baris bulan "${bulan}" dihapus.`, 'success');
+  showToast(`${deleted.length} baris bulan "${label}" dihapus.`, 'success');
   await loadBulanan();
 }
 
