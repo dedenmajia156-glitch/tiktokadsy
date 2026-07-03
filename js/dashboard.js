@@ -91,6 +91,7 @@ async function loadDashboard(forceRefresh = false) {
       renderStats(cached.stats);
       renderChart(cachedChart, bulan);
       renderTopVideo(cached.topVids);
+      renderTopRevenue(cached.topRevs || []);
       renderKillCandidates(cached.kills);
       renderNeedCheck();
       return;
@@ -103,22 +104,25 @@ async function loadDashboard(forceRefresh = false) {
     db().rpc('get_dashboard_stats', { p_user_id: uid, p_bulan: bulan, p_product_id: produkId }),
     db().rpc('get_top_videos',      { p_user_id: uid, p_bulan: bulan, p_product_id: produkId }),
     db().rpc('get_kill_candidates', { p_user_id: uid, p_bulan: bulan, p_product_id: produkId }),
+    db().rpc('get_top_revenue',     { p_user_id: uid, p_bulan: bulan, p_product_id: produkId }),
     needChart ? db().rpc('get_bulan_chart', { p_user_id: uid, p_product_id: produkId }) : Promise.resolve(null),
   ];
 
-  const [statsRes, topRes, killRes, chartRes] = await Promise.all(requests);
+  const [statsRes, topRes, killRes, revRes, chartRes] = await Promise.all(requests);
 
-  const stats   = statsRes.data?.[0] || {};
-  const topVids = topRes.data || [];
-  const kills   = killRes.data || [];
-  const chart   = chartRes ? (chartRes.data || []) : getCache(chartKey);
+  const stats    = statsRes.data?.[0] || {};
+  const topVids  = topRes.data || [];
+  const kills    = killRes.data || [];
+  const topRevs  = revRes.data || [];
+  const chart    = chartRes ? (chartRes.data || []) : getCache(chartKey);
 
-  setCache(key, { stats, topVids, kills });
+  setCache(key, { stats, topVids, kills, topRevs });
   if (needChart) setCache(chartKey, chart);
 
   renderStats(stats);
   renderChart(chart, bulan);
   renderTopVideo(topVids);
+  renderTopRevenue(topRevs);
   renderKillCandidates(kills);
   renderNeedCheck();
 }
@@ -197,6 +201,29 @@ function renderTopVideo(vids) {
         <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(100, roas/thr.high*100)}%"></div></div>
       </div>
       <div class="top-roas ${roasClass(roas, thr.high, thr.mid)}">${roas.toFixed(1)}x</div>
+    </li>`;
+  }).join('');
+}
+
+function renderTopRevenue(vids) {
+  const list = document.getElementById('top-revenue-list');
+  if (!vids.length) {
+    list.innerHTML = '<li><div class="empty-state"><div class="icon">📭</div><p>Belum ada data</p></div></li>';
+    return;
+  }
+  const numClasses = ['gold','silver','bronze','',''];
+  const maxRev = Number(vids[0]?.total_revenue) || 1;
+  list.innerHTML = vids.map((v, i) => {
+    const rev   = Number(v.total_revenue) || 0;
+    const title = v.video_title && v.video_title !== '-' ? v.video_title.slice(0, 40) : 'Video ID: ' + (v.video_id || '').slice(-8);
+    return `<li>
+      <div class="top-num ${numClasses[i]}">${String(i+1).padStart(2,'0')}</div>
+      <div class="top-info">
+        <div class="vname">${title}</div>
+        <div class="vacct">${v.tiktok_account || '-'}</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(100, rev/maxRev*100)}%;background:linear-gradient(90deg,#10b981,#34d399)"></div></div>
+      </div>
+      <div class="top-roas roas-high">${fmtRp(rev)}</div>
     </li>`;
   }).join('');
 }
