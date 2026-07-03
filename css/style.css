@@ -338,6 +338,8 @@ body {
 .main-content {
   margin-left: 230px;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
