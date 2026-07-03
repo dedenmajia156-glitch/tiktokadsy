@@ -33,12 +33,30 @@ function clearDashCache() {
   await loadDashboard();
 })();
 
-async function loadFilters() {
+// Re-load ketika admin ganti advertiser
+window.addEventListener('advertiserSwitch', async () => {
+  clearDashCache();
+  // Reset filter produk & bulan, lalu reload
+  document.getElementById('fil-produk').innerHTML = '<option value="">Semua Produk</option>';
+  document.getElementById('fil-bulan').innerHTML  = '<option value="">Semua Bulan</option>';
+  products = [];
+  prodThresholds = {};
+  await loadFilters();
+  await loadDashboard(true);
+});
+
+// Pakai advertiser yang dipilih (admin), atau user sendiri
+async function getTargetUid() {
   const uid = (await getUser()).id;
+  return window.__activeAdvertiser || uid;
+}
+
+async function loadFilters() {
+  const uid = await getTargetUid();
 
   // Load produk
   let q = db().from('products').select('*').order('nama_produk');
-  if (profile?.role !== 'admin') q = q.eq('user_id', uid);
+  if (profile?.role !== 'admin' || window.__activeAdvertiser) q = q.eq('user_id', uid);
   const { data: prods } = await q;
   products = prods || [];
   products.forEach(p => {
@@ -51,7 +69,7 @@ async function loadFilters() {
     selProduk.appendChild(opt);
   });
 
-  // Load distinct bulan via RPC (cepat, tidak fetch semua row)
+  // Load distinct bulan via RPC
   const { data: bulanRaw } = await db().rpc('get_distinct_bulan', { p_user_id: uid });
   const bulanOrder = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
   const bulanSet = (bulanRaw || []).map(r => r.bulan).filter(Boolean);
@@ -77,7 +95,7 @@ async function loadFilters() {
 }
 
 async function loadDashboard(forceRefresh = false) {
-  const uid      = (await getUser()).id;
+  const uid      = await getTargetUid();
   const bulan    = document.getElementById('fil-bulan').value || null;
   const produkId = document.getElementById('fil-produk').value || null;
   const key      = cacheKey(uid, bulan, produkId);
@@ -115,6 +133,8 @@ async function loadDashboard(forceRefresh = false) {
   const kills    = killRes.data || [];
   const topRevs  = revRes.data || [];
   const chart    = chartRes ? (chartRes.data || []) : getCache(chartKey);
+  if (revRes.error) console.error('get_top_revenue error:', revRes.error);
+  console.log('top revenue data:', topRevs);
 
   setCache(key, { stats, topVids, kills, topRevs });
   if (needChart) setCache(chartKey, chart);
@@ -256,7 +276,7 @@ function renderKillCandidates(kills) {
 }
 
 async function renderNeedCheck() {
-  const uid = (await getUser()).id;
+  const uid = await getTargetUid();
   let q = db().from('video_decisions')
     .select('*, ads_data(video_title, tiktok_account)')
     .eq('keputusan', 'scale')
