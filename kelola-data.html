@@ -233,9 +233,10 @@ async function loadBulanan() {
 async function hapusBulanan(bulan) {
   if (!confirm(`Hapus semua data bulan "${bulan}"?\nData tidak bisa dikembalikan.`)) return;
   const uid = (await getUser()).id;
-  let q = db().from('ads_data').delete().eq('bulan', bulan);
-  if (profile?.role !== 'admin') q = q.eq('user_id', uid);
-  const { error } = await q;
+  const { error } = await db().from('ads_data')
+    .delete()
+    .eq('bulan', bulan)
+    .eq('user_id', uid);
   if (error) { showToast('Gagal hapus: ' + error.message, 'error'); return; }
   showToast(`Data bulan "${bulan}" dihapus.`, 'success');
   await loadBulanan();
@@ -314,9 +315,10 @@ async function hapusHarian(tanggal) {
   const dateDisp = new Date(tanggal + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
   if (!confirm(`Hapus semua data tanggal "${dateDisp}"?\nData tidak bisa dikembalikan.`)) return;
   const uid = (await getUser()).id;
-  let q = db().from('ads_data_harian').delete().eq('tanggal', tanggal);
-  if (profile?.role !== 'admin') q = q.eq('user_id', uid);
-  const { error } = await q;
+  const { error } = await db().from('ads_data_harian')
+    .delete()
+    .eq('tanggal', tanggal)
+    .eq('user_id', uid);
   if (error) { showToast('Gagal hapus: ' + error.message, 'error'); return; }
   showToast(`Data tanggal "${dateDisp}" dihapus.`, 'success');
   await loadHarian();
