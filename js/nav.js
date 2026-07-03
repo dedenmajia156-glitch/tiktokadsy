@@ -4,6 +4,7 @@ const NAV_ICONS = {
   dashboard:     ic(`<rect x='3' y='3' width='7' height='7' rx='1'/><rect x='14' y='3' width='7' height='7' rx='1'/><rect x='3' y='14' width='7' height='7' rx='1'/><rect x='14' y='14' width='7' height='7' rx='1'/>`),
   'data-iklan':  ic(`<path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/><polyline points='17 8 12 3 7 8'/><line x1='12' y1='3' x2='12' y2='15'/>`),
   'video-tracker': ic(`<polygon points='23 7 16 12 23 17 23 7'/><rect x='1' y='5' width='15' height='14' rx='2' ry='2'/>`),
+  'tracker-harian': ic(`<rect x='3' y='4' width='18' height='18' rx='2'/><line x1='16' y1='2' x2='16' y2='6'/><line x1='8' y1='2' x2='8' y2='6'/><line x1='3' y1='10' x2='21' y2='10'/><polyline points='8 14 10 16 14 13'/>`),
   'scale-kill':  ic(`<polyline points='22 7 13.5 15.5 8.5 10.5 2 17'/><polyline points='16 7 22 7 22 13'/>`),
   produk:        ic(`<path d='m7.5 4.27 9 5.15'/><path d='M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z'/><path d='m3.3 7 8.7 5 8.7-5'/><path d='M12 22V12'/>`),
   users:         ic(`<path d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'/><circle cx='9' cy='7' r='4'/><path d='M22 21v-2a4 4 0 0 0-3-3.87'/><path d='M16 3.13a4 4 0 0 1 0 7.75'/>`),
@@ -33,6 +34,9 @@ function renderNav(activePage, pageTitle) {
       </a>
       <a href="video-tracker.html" class="nav-link" data-page="video-tracker">
         <span class="icon">${NAV_ICONS['video-tracker']}</span> Video Tracker
+      </a>
+      <a href="video-tracker-harian.html" class="nav-link" data-page="tracker-harian">
+        <span class="icon">${NAV_ICONS['tracker-harian']}</span> Tracker Harian
       </a>
       <a href="scale-kill.html" class="nav-link" data-page="scale-kill" id="nav-sk">
         <span class="icon">${NAV_ICONS['scale-kill']}</span> Scale / Kill
