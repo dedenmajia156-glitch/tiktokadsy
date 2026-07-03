@@ -196,7 +196,10 @@ async function loadBulanan() {
       return parseB(b.bulan) - parseB(a.bulan);
     });
 
-    grid.innerHTML = sorted.map(d => `
+    // Simpan ke array global agar onclick bisa akses lewat index
+    window._bulanList = sorted;
+
+    grid.innerHTML = sorted.map((d, i) => `
       <div class="data-card">
         <div class="dc-title">📆 ${d.bulan}</div>
         <div class="dc-meta">
@@ -222,7 +225,7 @@ async function loadBulanan() {
           </div>
         </div>
         <div class="dc-actions">
-          <button class="btn-hapus" onclick="hapusBulanan(${JSON.stringify(d.realBulan)})">🗑 Hapus Data</button>
+          <button class="btn-hapus" onclick="hapusBulanan(${i})">🗑 Hapus Data</button>
         </div>
       </div>
     `).join('');
@@ -231,13 +234,16 @@ async function loadBulanan() {
   }
 }
 
-async function hapusBulanan(realBulan) {
-  const label = realBulan || '(Tanpa Bulan)';
+async function hapusBulanan(idx) {
+  const d = window._bulanList?.[idx];
+  if (!d) return;
+  const realBulan = d.realBulan;
+  const label = d.bulan;
+
   if (!confirm(`Hapus semua data bulan "${label}"?\nData tidak bisa dikembalikan.`)) return;
   const uid = (await getUser()).id;
 
   let dq = db().from('ads_data').delete();
-  // Gunakan nilai asli: null pakai .is(), string pakai .eq()
   if (realBulan === null || realBulan === undefined) {
     dq = dq.is('bulan', null);
   } else {
