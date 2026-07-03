@@ -115,7 +115,18 @@ async function submitTopup() {
     // 4. Kirim notif WA
     if (waTargets.length) {
       btn.textContent = 'Mengirim notifikasi...';
-      const approveLink = `${window.location.origin}/api/approve?id=${saved.id}&token=${approveToken}`;
+      const rawLink = `${window.location.origin}/api/approve?id=${saved.id}&token=${approveToken}`;
+      // Shorten URL via TinyURL
+      let approveLink = rawLink;
+      try {
+        const shortenResp = await fetch('/api/topup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'shorten', url: rawLink })
+        });
+        const shortenData = await shortenResp.json();
+        if (shortenData.ok && shortenData.short_url) approveLink = shortenData.short_url;
+      } catch (_) { /* pakai URL asli kalau gagal */ }
       const pesan = buildWaMessage(profile?.nama || user.email, nominal, ext, approveLink);
       await fetch('/api/topup', {
         method: 'POST',
