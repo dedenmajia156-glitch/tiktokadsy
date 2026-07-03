@@ -559,7 +559,7 @@ body {
 
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-.grid-65-35 { display: grid; grid-template-columns: 1.8fr 1fr; gap: 16px; }
+.grid-65-35 { display: grid; grid-template-columns: 1.8fr 1fr; gap: 16px; align-items: start; }
 
 /* ============================================
    TABLE
@@ -821,8 +821,8 @@ tbody tr:hover { background: #f8f9ff; }
 .top-list li {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 0;
+  gap: 10px;
+  padding: 6px 0;
   border-bottom: 1px solid var(--border);
 }
 .top-list li:last-child { border-bottom: none; }
@@ -846,22 +846,22 @@ tbody tr:hover { background: #f8f9ff; }
 
 .top-info { flex: 1; min-width: 0; }
 .top-info .vname {
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.top-info .vacct { font-size: 11px; color: var(--text-muted); }
+.top-info .vacct { font-size: 10px; color: var(--text-muted); }
 
-.top-roas { font-size: 13px; font-weight: 700; }
+.top-roas { font-size: 12px; font-weight: 700; white-space: nowrap; }
 
 /* Progress bar */
 .progress-bar {
-  height: 4px;
+  height: 3px;
   background: var(--border);
   border-radius: 4px;
-  margin-top: 4px;
+  margin-top: 3px;
   overflow: hidden;
 }
 .progress-fill {
