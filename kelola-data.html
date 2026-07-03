@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="img/logo-adsy.png">
+<title>Kelola Data — GMV MAX Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/nav.js"></script>
+<style>
+  .tab-bar {
+    display: flex;
+    background: #fff;
+    border-radius: 12px;
+    padding: 5px;
+    gap: 4px;
+    box-shadow: var(--card-shadow);
+    width: fit-content;
+    margin-bottom: 20px;
+  }
+  .tab-btn {
+    border: none;
+    background: transparent;
+    padding: 9px 22px;
+    border-radius: 9px;
+    font-size: 13.5px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all .2s;
+  }
+  .tab-btn.active {
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+  }
+  .data-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 14px;
+  }
+  .data-card {
+    background: #fff;
+    border-radius: 14px;
+    border: 1.5px solid var(--border);
+    padding: 18px;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .data-card:hover {
+    border-color: var(--primary);
+    box-shadow: 0 4px 20px rgba(99,102,241,0.12);
+  }
+  .dc-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+  .dc-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 14px;
+  }
+  .dc-meta-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+  }
+  .dc-meta-label { color: var(--text-muted); }
+  .dc-meta-val { font-weight: 600; color: var(--text); }
+  .dc-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+  .btn-hapus {
+    background: #fee2e2;
+    color: #991b1b;
+    border: none;
+    border-radius: 8px;
+    padding: 7px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background .2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-hapus:hover { background: #fecaca; }
+</style>
+</head>
+<body>
+<div class="app-wrap">
+  <div id="sidebar-container"></div>
+  <div class="main-content">
+    <div id="topbar-container"></div>
+    <div class="page-content">
+
+      <div class="page-header">
+        <div>
+          <h2>🗂 Kelola Data</h2>
+          <p>Lihat dan hapus data bulanan maupun harian yang sudah diupload</p>
+        </div>
+      </div>
+
+      <!-- Tab -->
+      <div class="tab-bar">
+        <button class="tab-btn active" id="tab-bulanan" onclick="switchTab('bulanan')">📆 Bulanan</button>
+        <button class="tab-btn" id="tab-harian" onclick="switchTab('harian')">📅 Harian</button>
+      </div>
+
+      <!-- Bulanan -->
+      <div id="panel-bulanan">
+        <div id="grid-bulanan" class="data-grid">
+          <div class="loader"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- Harian -->
+      <div id="panel-harian" style="display:none">
+        <div id="grid-harian" class="data-grid">
+          <div class="loader"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script>
+let profile = null;
+
+(async () => {
+  profile = await initPage('kelola-data', 'Kelola Data');
+  await loadBulanan();
+})();
+
+function switchTab(tab) {
+  document.getElementById('tab-bulanan').classList.toggle('active', tab === 'bulanan');
+  document.getElementById('tab-harian').classList.toggle('active', tab === 'harian');
+  document.getElementById('panel-bulanan').style.display = tab === 'bulanan' ? '' : 'none';
+  document.getElementById('panel-harian').style.display = tab === 'harian' ? '' : 'none';
+  if (tab === 'harian') loadHarian();
+}
+
+// ============ BULANAN ============
+async function loadBulanan() {
+  const uid = (await getUser()).id;
+  const grid = document.getElementById('grid-bulanan');
+  grid.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+
+  try {
+    // Ambil semua row ads_data, aggregate per bulan
+    let q = db().from('ads_data')
+      .select('bulan, cost, gross_revenue, orders, video_id');
+    if (profile?.role !== 'admin') q = q.eq('user_id', uid);
+    const rows = await fetchAllRows(q);
+
+    if (!rows.length) {
+      grid.innerHTML = '<div class="empty-state"><div class="icon">📭</div><h3>Belum ada data bulanan</h3></div>';
+      return;
+    }
+
+    // Group by bulan
+    const map = {};
+    rows.forEach(r => {
+      const b = r.bulan || '—';
+      if (!map[b]) map[b] = { bulan: b, totalRows: 0, totalCost: 0, totalRev: 0, totalOrders: 0, videoSet: new Set() };
+      map[b].totalRows++;
+      map[b].totalCost += r.cost || 0;
+      map[b].totalRev += r.gross_revenue || 0;
+      map[b].totalOrders += r.orders || 0;
+      if (r.video_id) map[b].videoSet.add(r.video_id);
+    });
+
+    // Sort by bulan — parse nama bulan Indonesia
+    const bulanOrder = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+    const sorted = Object.values(map).sort((a, b) => {
+      const parseB = s => {
+        const parts = s.split(' ');
+        const month = bulanOrder.indexOf(parts[0]);
+        const year = parseInt(parts[1]) || 0;
+        return year * 100 + month;
+      };
+      return parseB(b.bulan) - parseB(a.bulan);
+    });
+
+    grid.innerHTML = sorted.map(d => `
+      <div class="data-card">
+        <div class="dc-title">📆 ${d.bulan}</div>
+        <div class="dc-meta">
+          <div class="dc-meta-row">
+            <span class="dc-meta-label">Total Baris</span>
+            <span class="dc-meta-val">${d.totalRows.toLocaleString('id-ID')}</span>
+          </div>
+          <div class="dc-meta-row">
+            <span class="dc-meta-label">Video Unik</span>
+            <span class="dc-meta-val">${d.videoSet.size}</span>
+          </div>
+          <div class="dc-meta-row">
+            <span class="dc-meta-label">Total Cost</span>
+            <span class="dc-meta-val">${fmtRp(d.totalCost)}</span>
+          </div>
+          <div class="dc-meta-row">
+            <span class="dc-meta-label">Total Revenue</span>
+            <span class="dc-meta-val">${fmtRp(d.totalRev)}</span>
+          </div>
+          <div class="dc-meta-row">
+            <span class="dc-meta-label">ROAS</span>
+            <span class="dc-meta-val">${d.totalCost > 0 ? (d.totalRev / d.totalCost).toFixed(2) + 'x' : '-'}</span>
+          </div>
+        </div>
+        <div class="dc-actions">
+          <button class="btn-hapus" onclick="hapusBulanan('${d.bulan}')">🗑 Hapus Data</button>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    grid.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><h3>Gagal memuat: ${e.message}</h3></div>`;
+  }
+}
+
+async function hapusBulanan(bulan) {
+  if (!confirm(`Hapus semua data bulan "${bulan}"?\nData tidak bisa dikembalikan.`)) return;
+  const uid = (await getUser()).id;
+  let q = db().from('ads_data').delete().eq('bulan', bulan);
+  if (profile?.role !== 'admin') q = q.eq('user_id', uid);
+  const { error } = await q;
+  if (error) { showToast('Gagal hapus: ' + error.message, 'error'); return; }
+  showToast(`Data bulan "${bulan}" dihapus.`, 'success');
+  await loadBulanan();
+}
+
+// ============ HARIAN ============
+async function loadHarian() {
+  const uid = (await getUser()).id;
+  const grid = document.getElementById('grid-harian');
+  grid.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+
+  try {
+    let q = db().from('ads_data_harian')
+      .select('tanggal, cost, gross_revenue, orders, video_id');
+    if (profile?.role !== 'admin') q = q.eq('user_id', uid);
+    const rows = await fetchAllRows(q);
+
+    if (!rows.length) {
+      grid.innerHTML = '<div class="empty-state"><div class="icon">📭</div><h3>Belum ada data harian</h3></div>';
+      return;
+    }
+
+    // Group by tanggal
+    const map = {};
+    rows.forEach(r => {
+      const t = r.tanggal;
+      if (!map[t]) map[t] = { tanggal: t, totalRows: 0, totalCost: 0, totalRev: 0, totalOrders: 0, videoSet: new Set() };
+      map[t].totalRows++;
+      map[t].totalCost += r.cost || 0;
+      map[t].totalRev += r.gross_revenue || 0;
+      map[t].totalOrders += r.orders || 0;
+      if (r.video_id) map[t].videoSet.add(r.video_id);
+    });
+
+    // Sort terbaru dulu
+    const sorted = Object.values(map).sort((a, b) => b.tanggal.localeCompare(a.tanggal));
+
+    grid.innerHTML = sorted.map(d => {
+      const dateDisp = new Date(d.tanggal + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      return `
+      <div class="data-card">
+        <div class="dc-title">📅 ${dateDisp}</div>
+        <div class="dc-meta">
+          <div class="dc-meta-row">
+            <span class="dc-meta-label">Total Baris</span>
+            <span class="dc-meta-val">${d.totalRows.toLocaleString('id-ID')}</span>
+          </div>
+          <div class="dc-meta-row">
+            <span class="dc-meta-label">Video Unik</span>
+            <span class="dc-meta-val">${d.videoSet.size}</span>
+          </div>
+          <div class="dc-meta-row">
+            <span class="dc-meta-label">Total Cost</span>
+            <span class="dc-meta-val">${fmtRp(d.totalCost)}</span>
+          </div>
+          <div class="dc-meta-row">
+            <span class="dc-meta-label">Total Revenue</span>
+            <span class="dc-meta-val">${fmtRp(d.totalRev)}</span>
+          </div>
+          <div class="dc-meta-row">
+            <span class="dc-meta-label">ROAS</span>
+            <span class="dc-meta-val">${d.totalCost > 0 ? (d.totalRev / d.totalCost).toFixed(2) + 'x' : '-'}</span>
+          </div>
+        </div>
+        <div class="dc-actions">
+          <button class="btn-hapus" onclick="hapusHarian('${d.tanggal}')">🗑 Hapus Data</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    grid.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><h3>Gagal memuat: ${e.message}</h3></div>`;
+  }
+}
+
+async function hapusHarian(tanggal) {
+  const dateDisp = new Date(tanggal + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+  if (!confirm(`Hapus semua data tanggal "${dateDisp}"?\nData tidak bisa dikembalikan.`)) return;
+  const uid = (await getUser()).id;
+  let q = db().from('ads_data_harian').delete().eq('tanggal', tanggal);
+  if (profile?.role !== 'admin') q = q.eq('user_id', uid);
+  const { error } = await q;
+  if (error) { showToast('Gagal hapus: ' + error.message, 'error'); return; }
+  showToast(`Data tanggal "${dateDisp}" dihapus.`, 'success');
+  await loadHarian();
+}
+</script>
+</body>
+</html>
