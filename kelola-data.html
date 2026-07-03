@@ -233,11 +233,9 @@ async function loadBulanan() {
 async function hapusBulanan(bulan) {
   if (!confirm(`Hapus semua data bulan "${bulan}"?\nData tidak bisa dikembalikan.`)) return;
   const uid = (await getUser()).id;
-  const { data: deleted, error } = await db().from('ads_data')
-    .delete()
-    .eq('bulan', bulan)
-    .eq('user_id', uid)
-    .select('id');
+  let dq = db().from('ads_data').delete().eq('bulan', bulan);
+  if (profile?.role !== 'admin') dq = dq.eq('user_id', uid);
+  const { data: deleted, error } = await dq.select('id');
   if (error) { showToast('Gagal: ' + error.message, 'error'); return; }
   if (!deleted || deleted.length === 0) {
     showToast('Tidak ada yang terhapus — jalankan SQL policy dulu di Supabase (lihat instruksi di halaman ini)', 'error');
@@ -320,11 +318,9 @@ async function hapusHarian(tanggal) {
   const dateDisp = new Date(tanggal + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
   if (!confirm(`Hapus semua data tanggal "${dateDisp}"?\nData tidak bisa dikembalikan.`)) return;
   const uid = (await getUser()).id;
-  const { data: deleted, error } = await db().from('ads_data_harian')
-    .delete()
-    .eq('tanggal', tanggal)
-    .eq('user_id', uid)
-    .select('id');
+  let dhq = db().from('ads_data_harian').delete().eq('tanggal', tanggal);
+  if (profile?.role !== 'admin') dhq = dhq.eq('user_id', uid);
+  const { data: deleted, error } = await dhq.select('id');
   if (error) { showToast('Gagal: ' + error.message, 'error'); return; }
   if (!deleted || deleted.length === 0) {
     showToast('Tidak ada yang terhapus — jalankan SQL policy dulu di Supabase', 'error');
