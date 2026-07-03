@@ -233,12 +233,14 @@ async function loadBulanan() {
 async function hapusBulanan(bulan) {
   if (!confirm(`Hapus semua data bulan "${bulan}"?\nData tidak bisa dikembalikan.`)) return;
   const uid = (await getUser()).id;
+  console.log('UID login:', uid, '| role:', profile?.role, '| bulan:', bulan);
   let dq = db().from('ads_data').delete().eq('bulan', bulan);
   if (profile?.role !== 'admin') dq = dq.eq('user_id', uid);
   const { data: deleted, error } = await dq.select('id');
+  console.log('Result:', { deleted, error });
   if (error) { showToast('Gagal: ' + error.message, 'error'); return; }
   if (!deleted || deleted.length === 0) {
-    showToast('Tidak ada yang terhapus — jalankan SQL policy dulu di Supabase (lihat instruksi di halaman ini)', 'error');
+    showToast('UID kamu: ' + uid + ' | Cek console browser (F12)', 'error');
     return;
   }
   showToast(`${deleted.length} baris bulan "${bulan}" dihapus.`, 'success');
