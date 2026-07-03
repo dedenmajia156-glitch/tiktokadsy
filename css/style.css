@@ -7,13 +7,13 @@
   --primary: #6366f1;
   --primary-dark: #4f46e5;
   --primary-light: #e0e7ff;
-  --bg: #f5f6fa;
-  --sidebar-bg: #1e1b4b;
-  --sidebar-active: rgba(255,255,255,0.12);
-  --sidebar-text: rgba(255,255,255,0.7);
-  --sidebar-text-active: #fff;
+  --bg: #f0f4ff;
+  --sidebar-bg: #ffffff;
+  --sidebar-active: #f1f5f9;
+  --sidebar-text: #64748b;
+  --sidebar-text-active: #ffffff;
   --white: #ffffff;
-  --card-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  --card-shadow: 0 2px 16px rgba(99,102,241,0.07);
   --radius: 14px;
   --radius-sm: 8px;
   --text: #1e293b;
@@ -28,7 +28,8 @@
 
 body {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  background: var(--bg);
+  background: linear-gradient(135deg, #eef2ff 0%, #f0fdf4 100%);
+  background-attachment: fixed;
   color: var(--text);
   font-size: 14px;
   line-height: 1.5;
@@ -199,6 +200,8 @@ body {
   top: 0; left: 0; bottom: 0;
   z-index: 100;
   transition: width .3s;
+  box-shadow: 2px 0 16px rgba(99,102,241,0.06);
+  border-right: 1px solid #f1f5f9;
 }
 
 .sidebar-brand {
@@ -223,13 +226,13 @@ body {
 .brand-name {
   font-size: 16px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text);
   letter-spacing: -0.3px;
 }
 
 .brand-sub {
   font-size: 10px;
-  color: var(--sidebar-text);
+  color: var(--text-muted);
   display: block;
 }
 
@@ -243,7 +246,7 @@ body {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 1px;
-  color: rgba(255,255,255,0.3);
+  color: #94a3b8;
   text-transform: uppercase;
   padding: 12px 8px 6px;
 }
@@ -263,15 +266,17 @@ body {
 }
 
 .nav-link:hover {
-  background: var(--sidebar-active);
-  color: var(--sidebar-text-active);
+  background: #f1f5f9;
+  color: var(--primary);
 }
+.nav-link:hover .icon svg { stroke: var(--primary); }
 
 .nav-link.active {
   background: var(--primary);
   color: #fff;
-  box-shadow: 0 4px 12px rgba(99,102,241,0.35);
+  box-shadow: 0 4px 14px rgba(99,102,241,0.3);
 }
+.nav-link.active .icon svg { stroke: #fff; }
 
 .nav-link .icon {
   width: 20px;
@@ -313,7 +318,7 @@ body {
 
 .sidebar-signout {
   padding: 12px;
-  border-top: 1px solid rgba(255,255,255,0.08);
+  border-top: 1px solid #f1f5f9;
 }
 
 .btn-signout {
@@ -332,7 +337,8 @@ body {
   font-weight: 500;
   transition: all .2s;
 }
-.btn-signout:hover { background: rgba(239,68,68,0.15); color: #fca5a5; }
+.btn-signout:hover { background: #fff1f2; color: #ef4444; }
+.btn-signout:hover .icon svg { stroke: #ef4444; }
 
 /* ---- MAIN CONTENT ---- */
 .main-content {
@@ -487,11 +493,18 @@ body {
   flex-shrink: 0;
 }
 
-.stat-icon.pink { background: #fdf2f8; }
-.stat-icon.orange { background: #fffbeb; }
-.stat-icon.green { background: #f0fdf4; }
-.stat-icon.purple { background: #faf5ff; }
-.stat-icon.blue { background: #eff6ff; }
+.stat-icon.pink   { background: linear-gradient(135deg, #ff6b8a, #ff4d6d); }
+.stat-icon.orange { background: linear-gradient(135deg, #ffb347, #ff8c00); }
+.stat-icon.green  { background: linear-gradient(135deg, #52c41a, #389e0d); }
+.stat-icon.purple { background: linear-gradient(135deg, #9b59b6, #7c3aed); }
+.stat-icon.blue   { background: linear-gradient(135deg, #4facfe, #2563eb); }
+
+/* Stat card color variants */
+.stat-card.pink   { background: linear-gradient(135deg, #fff0f3, #ffe4e8); border: none; }
+.stat-card.orange { background: linear-gradient(135deg, #fff7e6, #fff0cc); border: none; }
+.stat-card.green  { background: linear-gradient(135deg, #f0fff4, #dcfce7); border: none; }
+.stat-card.purple { background: linear-gradient(135deg, #faf5ff, #ede9fe); border: none; }
+.stat-card.blue   { background: linear-gradient(135deg, #eff6ff, #dbeafe); border: none; }
 
 .stat-info .value {
   font-size: 22px;
