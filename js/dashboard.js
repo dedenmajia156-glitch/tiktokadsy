@@ -81,13 +81,15 @@ async function loadDashboard(forceRefresh = false) {
   const bulan    = document.getElementById('fil-bulan').value || null;
   const produkId = document.getElementById('fil-produk').value || null;
   const key      = cacheKey(uid, bulan, produkId);
+  const chartKey = `gmv_chart_${uid}_${produkId || 'all'}`;
 
-  // Cek cache dulu
+  // Cek cache stats dulu
   if (!forceRefresh) {
-    const cached = getCache(key);
-    if (cached) {
+    const cached      = getCache(key);
+    const cachedChart = getCache(chartKey);
+    if (cached && cachedChart) {
       renderStats(cached.stats);
-      renderChart(cached.chart);
+      renderChart(cachedChart, bulan);
       renderTopVideo(cached.topVids);
       renderKillCandidates(cached.kills);
       renderNeedCheck();
@@ -95,24 +97,27 @@ async function loadDashboard(forceRefresh = false) {
     }
   }
 
-  // Fetch dari Supabase — semua paralel
-  const [statsRes, topRes, chartRes, killRes] = await Promise.all([
+  // Fetch paralel — chart pakai cache terpisah (tidak tergantung bulan)
+  const needChart = !getCache(chartKey);
+  const requests = [
     db().rpc('get_dashboard_stats', { p_user_id: uid, p_bulan: bulan, p_product_id: produkId }),
     db().rpc('get_top_videos',      { p_user_id: uid, p_bulan: bulan, p_product_id: produkId }),
-    db().rpc('get_bulan_chart',     { p_user_id: uid, p_product_id: produkId }),
     db().rpc('get_kill_candidates', { p_user_id: uid, p_bulan: bulan, p_product_id: produkId }),
-  ]);
+    needChart ? db().rpc('get_bulan_chart', { p_user_id: uid, p_product_id: produkId }) : Promise.resolve(null),
+  ];
+
+  const [statsRes, topRes, killRes, chartRes] = await Promise.all(requests);
 
   const stats   = statsRes.data?.[0] || {};
   const topVids = topRes.data || [];
-  const chart   = chartRes.data || [];
   const kills   = killRes.data || [];
+  const chart   = chartRes ? (chartRes.data || []) : getCache(chartKey);
 
-  // Simpan ke cache
-  setCache(key, { stats, topVids, chart, kills });
+  setCache(key, { stats, topVids, kills });
+  if (needChart) setCache(chartKey, chart);
 
   renderStats(stats);
-  renderChart(chart);
+  renderChart(chart, bulan);
   renderTopVideo(topVids);
   renderKillCandidates(kills);
   renderNeedCheck();
@@ -129,7 +134,7 @@ function renderStats(stats) {
   document.getElementById('stat-video').textContent   = stats.video_count || 0;
 }
 
-function renderChart(chart) {
+function renderChart(chart, selectedBulan) {
   const bulanOrder = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
   const sorted = [...chart].sort((a, b) => {
     const parse = s => { const p = (s||'').split(' '); return (parseInt(p[1])||0)*100 + bulanOrder.indexOf(p[0]); };
@@ -140,6 +145,10 @@ function renderChart(chart) {
   const costs  = sorted.map(r => Number(r.total_cost) || 0);
   const revs   = sorted.map(r => Number(r.total_revenue) || 0);
 
+  // Highlight bulan yang dipilih, redup yang lain
+  const revColors  = labels.map(b => !selectedBulan || b === selectedBulan ? 'rgba(99,102,241,0.85)' : 'rgba(99,102,241,0.25)');
+  const costColors = labels.map(b => !selectedBulan || b === selectedBulan ? 'rgba(16,185,129,0.75)' : 'rgba(16,185,129,0.2)');
+
   const ctx = document.getElementById('chart-revenue').getContext('2d');
   if (chartRevenue) chartRevenue.destroy();
   chartRevenue = new Chart(ctx, {
@@ -147,8 +156,8 @@ function renderChart(chart) {
     data: {
       labels,
       datasets: [
-        { label: 'Revenue',   data: revs,  backgroundColor: 'rgba(99,102,241,0.8)', borderRadius: 6, order: 1 },
-        { label: 'Ads Spend', data: costs, backgroundColor: 'rgba(16,185,129,0.7)', borderRadius: 6, order: 2 }
+        { label: 'Revenue',   data: revs,  backgroundColor: revColors,  borderRadius: 6, order: 1 },
+        { label: 'Ads Spend', data: costs, backgroundColor: costColors, borderRadius: 6, order: 2 }
       ]
     },
     options: {
