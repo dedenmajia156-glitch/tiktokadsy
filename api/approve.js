@@ -83,7 +83,25 @@ module.exports = async (req, res) => {
 
     if (!updateResp.ok) throw new Error('Gagal update status');
 
-    // 3. Ambil nomor WA advertiser dari profiles
+    // 3. In-app notification untuk advertiser
+    try {
+      await fetch(
+        `${SUPABASE_URL}/rest/v1/notifications`,
+        {
+          method: 'POST',
+          headers: { ...sbHeaders, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({
+            user_id: req_data.user_id,
+            type: 'topup_approved',
+            title: 'Top Up Disetujui ✅',
+            message: `Request top up Rp ${fmtNum(req_data.nominal)} kamu sudah disetujui!`,
+            link: 'topup.html'
+          })
+        }
+      );
+    } catch(_) {}
+
+    // 4. Ambil nomor WA advertiser dari profiles
     const FONNTE_TOKEN = process.env.FONNTE_TOKEN;
     if (FONNTE_TOKEN && req_data.user_id) {
       try {
