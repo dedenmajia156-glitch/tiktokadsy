@@ -79,9 +79,20 @@ function renderNav(activePage, pageTitle) {
       <input type="text" placeholder="Cari di sini..." />
     </div>
     <div class="topbar-actions">
-      <div class="btn-icon" title="Notifikasi">
-        🔔
-        <span class="notif-dot" id="notif-dot" style="display:none"></span>
+      <div class="notif-wrap">
+        <button class="btn-icon" id="notif-btn" onclick="toggleNotifDropdown()" title="Notifikasi">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="notif-badge" id="notif-badge" style="display:none">0</span>
+        </button>
+        <div class="notif-dropdown" id="notif-dropdown" style="display:none">
+          <div class="notif-dd-header">
+            <span>Notifikasi</span>
+            <button class="notif-mark-all" onclick="markAllNotifRead()">Tandai semua dibaca</button>
+          </div>
+          <div class="notif-scroll" id="notif-list">
+            <div class="notif-empty">Memuat...</div>
+          </div>
+        </div>
       </div>
       <div class="user-pill" onclick="window.location.href='settings.html'">
         <div class="user-avatar" id="user-avatar">?</div>
@@ -109,6 +120,16 @@ async function initPage(activePage, pageTitle) {
 
   // Badge Scale/Kill pending
   loadPendingBadge();
+  // Notification bell
+  loadNotifCount();
+  // Close dropdown when clicking outside
+  document.addEventListener('click', e => {
+    const wrap = document.querySelector('.notif-wrap');
+    if (wrap && !wrap.contains(e.target)) {
+      const dd = document.getElementById('notif-dropdown');
+      if (dd) dd.style.display = 'none';
+    }
+  });
 
   return profile;
 }
@@ -128,6 +149,107 @@ async function loadPendingBadge() {
       badge.textContent = count;
       badge.style.display = 'inline-flex';
     }
+  } catch(_) {}
+}
+
+// ── Notification bell ──
+async function loadNotifCount() {
+  try {
+    const user = await getUser();
+    if (!user) return;
+    const { count } = await db()
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('is_read', false);
+    const badge = document.getElementById('notif-badge');
+    if (!badge) return;
+    if (count > 0) {
+      badge.textContent = count > 99 ? '99+' : count;
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  } catch(_) {}
+}
+
+let _notifOpen = false;
+
+function toggleNotifDropdown() {
+  const dd = document.getElementById('notif-dropdown');
+  if (!dd) return;
+  _notifOpen = !_notifOpen;
+  dd.style.display = _notifOpen ? 'block' : 'none';
+  if (_notifOpen) loadNotifList();
+}
+
+async function loadNotifList() {
+  const listEl = document.getElementById('notif-list');
+  if (!listEl) return;
+
+  try {
+    const user = await getUser();
+    if (!user) return;
+    const { data } = await db()
+      .from('notifications')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (!data?.length) {
+      listEl.innerHTML = '<div class="notif-empty">Tidak ada notifikasi</div>';
+      return;
+    }
+
+    const fmtTime = ts => {
+      const diff = Date.now() - new Date(ts);
+      const m = Math.floor(diff / 60000);
+      if (m < 1) return 'Baru saja';
+      if (m < 60) return `${m} menit lalu`;
+      const h = Math.floor(m / 60);
+      if (h < 24) return `${h} jam lalu`;
+      return new Date(ts).toLocaleDateString('id-ID', { day:'2-digit', month:'short' });
+    };
+
+    const typeIcon = { topup_request: '💳', topup_approved: '✅', topup_rejected: '❌' };
+
+    listEl.innerHTML = data.map(n => `
+      <div class="notif-item ${n.is_read ? '' : 'unread'}" onclick="handleNotifClick('${n.id}', '${n.link || ''}')">
+        <div class="notif-item-title">
+          ${!n.is_read ? '<span class="notif-unread-dot"></span>' : ''}
+          ${typeIcon[n.type] || '🔔'} ${n.title}
+        </div>
+        ${n.message ? `<div class="notif-item-msg">${n.message}</div>` : ''}
+        <div class="notif-item-time">${fmtTime(n.created_at)}</div>
+      </div>
+    `).join('');
+  } catch(e) {
+    listEl.innerHTML = '<div class="notif-empty">Gagal memuat notifikasi</div>';
+  }
+}
+
+async function handleNotifClick(id, link) {
+  // Mark as read
+  await db().from('notifications').update({ is_read: true }).eq('id', id);
+  await loadNotifCount();
+  // Navigate if link provided
+  if (link) window.location.href = link;
+  else {
+    const dd = document.getElementById('notif-dropdown');
+    if (dd) dd.style.display = 'none';
+    _notifOpen = false;
+    loadNotifList();
+  }
+}
+
+async function markAllNotifRead() {
+  try {
+    const user = await getUser();
+    if (!user) return;
+    await db().from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false);
+    await loadNotifCount();
+    loadNotifList();
   } catch(_) {}
 }
 

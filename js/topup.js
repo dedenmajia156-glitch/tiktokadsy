@@ -112,7 +112,10 @@ async function submitTopup() {
 
     if (dbErr) throw new Error(dbErr.message);
 
-    // 4. Kirim notif WA
+    // 4. Notif in-app untuk admin
+    notifyAdmins(profile?.nama || user.email, nominal, saved.id).catch(() => {});
+
+    // 5. Kirim notif WA
     if (waTargets.length) {
       btn.textContent = 'Mengirim notifikasi...';
       const approveLink = `${window.location.origin}/api/approve?id=${saved.id}&token=${approveToken}`;
@@ -126,7 +129,7 @@ async function submitTopup() {
       });
     }
 
-    // 5. Tampilkan sukses
+    // 6. Tampilkan sukses
     showSuccess(nominal, ext);
     resetForm();
 
@@ -285,4 +288,19 @@ function fileToBase64(file) {
 function formatNominalInput(el) {
   const raw = el.value.replace(/\D/g, '');
   el.value = raw ? Number(raw).toLocaleString('id-ID') : '';
+}
+
+// ── Notify admins via in-app notifications ──
+async function notifyAdmins(userName, nominal, requestId) {
+  const { data: admins } = await db().from('profiles').select('id').eq('role', 'admin');
+  if (!admins?.length) return;
+  const fmtNum = n => Number(n).toLocaleString('id-ID');
+  const notifs = admins.map(a => ({
+    user_id: a.id,
+    type: 'topup_request',
+    title: 'Request Top Up Baru',
+    message: `${userName} minta top up Rp ${fmtNum(nominal)}`,
+    link: 'topup.html'
+  }));
+  await db().from('notifications').insert(notifs);
 }
