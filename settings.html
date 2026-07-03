@@ -32,10 +32,15 @@
           <div class="card-header">
             <div class="card-title">📱 Notifikasi Top Up (WA)</div>
           </div>
-          <p style="font-size:13px;color:#64748b;margin-bottom:16px">Nomor WA yang akan menerima notifikasi setiap ada request top up baru.</p>
+          <p style="font-size:13px;color:#64748b;margin-bottom:16px">Nomor WA penerima notifikasi setiap ada request top up baru.</p>
           <div id="wa-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
-          <div style="display:flex;gap:8px">
-            <input type="tel" id="wa-new" placeholder="Contoh: 08123456789" style="flex:1" />
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input type="tel" id="wa-new" placeholder="Contoh: 08123456789" style="flex:1;min-width:160px" />
+            <select id="wa-new-role" style="width:120px">
+              <option value="CEO">CEO</option>
+              <option value="Finance">Finance</option>
+              <option value="SPV">SPV</option>
+            </select>
             <button class="btn btn-primary-sm" onclick="addWaTarget()">+ Tambah</button>
           </div>
           <div class="auth-err" id="wa-err" style="margin-top:8px"></div>
@@ -122,27 +127,37 @@ async function loadWaTargets() {
   renderWaList();
 }
 
+const ROLE_COLORS = { CEO: '#6366f1', Finance: '#10b981', SPV: '#f59e0b' };
+
 function renderWaList() {
   const el = document.getElementById('wa-list');
   if (!_waTargets.length) {
     el.innerHTML = '<div style="font-size:13px;color:#94a3b8">Belum ada nomor penerima notifikasi.</div>';
     return;
   }
-  el.innerHTML = _waTargets.map((num, i) => `
+  el.innerHTML = _waTargets.map((item, i) => {
+    // Support format lama (string) dan baru (object {no, role})
+    const no   = item.no || item;
+    const role = item.role || 'CEO';
+    const color = ROLE_COLORS[role] || '#6366f1';
+    return `
     <div style="display:flex;align-items:center;gap:8px;background:#f8fafc;border-radius:8px;padding:8px 12px">
-      <span style="font-size:13px;flex:1">📱 ${num}</span>
+      <span style="background:${color};color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">${role}</span>
+      <span style="font-size:13px;flex:1">📱 ${no}</span>
       <button onclick="removeWaTarget(${i})" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:16px;line-height:1">×</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 async function addWaTarget() {
   let num = document.getElementById('wa-new').value.trim().replace(/\D/g,'');
+  const role  = document.getElementById('wa-new-role').value;
   const errEl = document.getElementById('wa-err');
   errEl.style.display = 'none';
   if (!num || num.length < 8) { errEl.textContent = 'Nomor WA tidak valid.'; errEl.style.display = 'block'; return; }
   if (num.startsWith('0')) num = '62' + num.slice(1);
-  if (_waTargets.includes(num)) { errEl.textContent = 'Nomor sudah ada.'; errEl.style.display = 'block'; return; }
-  _waTargets.push(num);
+  if (_waTargets.some(t => (t.no || t) === num)) { errEl.textContent = 'Nomor sudah ada.'; errEl.style.display = 'block'; return; }
+  _waTargets.push({ no: num, role });
   await saveWaTargets();
   document.getElementById('wa-new').value = '';
 }
