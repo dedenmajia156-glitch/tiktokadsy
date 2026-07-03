@@ -143,7 +143,6 @@ function buildWaMessage(nama, nominal, ext, approveLink) {
     ``,
     `👤 *${nama}* minta top up:`,
     `💰 *Nominal: Rp ${fmtNum(nominal)}*`,
-    `*(copy: ${nominal})*`,
     ``,
     `📊 Hasil dari Screenshot:`,
     ext.shop_name        ? `• Toko: ${ext.shop_name}` : null,
