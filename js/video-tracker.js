@@ -216,25 +216,38 @@ function renderVideos(videos) {
     videos.flatMap(v => Object.keys(v.bulanData))
   )].sort((a, b) => parseBulan(a) - parseBulan(b));
 
+  // Sticky column layout: left positions & widths
+  const S = [
+    { l: 0,   w: 220 },  // 0: Video
+    { l: 220, w: 160 },  // 1: Produk
+    { l: 380, w: 100 },  // 2: Total Cost
+    { l: 480, w: 110 },  // 3: Total Revenue
+    { l: 590, w: 90  },  // 4: ROAS
+    { l: 680, w: 70  },  // 5: Orders  ← last pinned, has right shadow
+  ];
+  const DIVIDER = 'box-shadow:2px 0 8px rgba(0,0,0,0.08);border-right:1px solid #e2e8f0;';
+  const sH = i => `position:sticky;left:${S[i].l}px;width:${S[i].w}px;min-width:${S[i].w}px;background:#f8f9fe;z-index:4;${i===5?DIVIDER:''}`;
+  const sD = (i, bg='#fff') => `position:sticky;left:${S[i].l}px;width:${S[i].w}px;min-width:${S[i].w}px;background:${bg};z-index:2;${i===5?DIVIDER:''}`;
+
   el.innerHTML = `
     <div class="card" style="padding:0">
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Video</th>
-              <th>Produk</th>
-              <th>Total Cost</th>
-              <th>Total Revenue</th>
-              <th>ROAS</th>
-              <th>Orders</th>
+              <th style="${sH(0)}">Video</th>
+              <th style="${sH(1)}">Produk</th>
+              <th style="${sH(2)}">Total Cost</th>
+              <th style="${sH(3)}">Total Revenue</th>
+              <th style="${sH(4)}">ROAS</th>
+              <th style="${sH(5)}">Orders</th>
               ${allBulan.map(b => `
                 <th style="min-width:110px;text-align:center">
                   ${b.replace(' 20','<br>20')}
                   <div style="font-size:9px;font-weight:400;color:#94a3b8;margin-top:2px">Cost · Revenue · ROAS</div>
                 </th>`).join('')}
               <th>Keputusan</th>
-              <th style="position:sticky;right:0;background:#f8f9fe;z-index:2;box-shadow:-2px 0 6px rgba(0,0,0,0.06)">Aksi</th>
+              <th style="position:sticky;right:0;background:#f8f9fe;z-index:4;box-shadow:-2px 0 6px rgba(0,0,0,0.06)">Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -256,7 +269,7 @@ function renderVideos(videos) {
               }).join('');
 
               return `<tr style="border-top:1px solid #f1f5f9">
-                <td class="td-video" style="min-width:180px">
+                <td class="td-video" style="${sD(0)}">
                   <div class="vtitle">${v.title && v.title !== '-' ? v.title.slice(0,40) : 'ID: '+v.vid.slice(-10)}</div>
                   <div class="vaccount">${v.account}</div>
                   <div style="display:flex;align-items:center;gap:4px;margin-top:3px">
@@ -266,7 +279,7 @@ function renderVideos(videos) {
                     </button>
                   </div>
                 </td>
-                <td>
+                <td style="${sD(1)}">
                   <span class="badge badge-purple" style="font-size:10px">${v.produk}</span>
                   ${prodTiktokId[v.product_id] ? `
                   <div style="display:flex;align-items:center;gap:4px;margin-top:3px">
@@ -276,13 +289,13 @@ function renderVideos(videos) {
                     </button>
                   </div>` : ''}
                 </td>
-                <td class="num">${fmtRp(v.totalCost)}</td>
-                <td class="num">${fmtRp(v.totalRev)}</td>
-                <td><span class="${roasClass(v.roas, thr.high, thr.mid)} num fw-700">${v.roas.toFixed(2)}x</span></td>
-                <td>${v.totalOrders}</td>
+                <td class="num" style="${sD(2)}">${fmtRp(v.totalCost)}</td>
+                <td class="num" style="${sD(3)}">${fmtRp(v.totalRev)}</td>
+                <td style="${sD(4)}"><span class="${roasClass(v.roas, thr.high, thr.mid)} num fw-700">${v.roas.toFixed(2)}x</span></td>
+                <td style="${sD(5)}">${v.totalOrders}</td>
                 ${bulanCols}
                 <td>${decBadge}</td>
-                <td style="position:sticky;right:0;background:#fff;z-index:1;box-shadow:-2px 0 6px rgba(0,0,0,0.06)">
+                <td style="position:sticky;right:0;background:#fff;z-index:2;box-shadow:-2px 0 6px rgba(0,0,0,0.06)">
                   <button class="btn btn-primary-sm btn-sm" onclick="openDecisionModal('${v.vid}')">Keputusan</button>
                 </td>
               </tr>`;
@@ -290,16 +303,17 @@ function renderVideos(videos) {
           </tbody>
           <tfoot>
             <tr style="background:#f8f9fe;border-top:2px solid #e2e8f0;font-weight:700">
-              <td colspan="2" style="padding:10px 14px;font-size:13px;color:#475569">
+              <td style="${sD(0,'#f8f9fe')}padding:10px 14px;font-size:13px;color:#475569">
                 TOTAL (${videos.length} video)
               </td>
-              <td class="num" style="padding:10px 8px">
+              <td style="${sD(1,'#f8f9fe')}padding:10px 8px"></td>
+              <td class="num" style="${sD(2,'#f8f9fe')}padding:10px 8px">
                 ${fmtRp(videos.reduce((s,v) => s + v.totalCost, 0))}
               </td>
-              <td class="num" style="padding:10px 8px">
+              <td class="num" style="${sD(3,'#f8f9fe')}padding:10px 8px">
                 ${fmtRp(videos.reduce((s,v) => s + v.totalRev, 0))}
               </td>
-              <td style="padding:10px 8px">
+              <td style="${sD(4,'#f8f9fe')}padding:10px 8px">
                 ${(() => {
                   const tc = videos.reduce((s,v) => s + v.totalCost, 0);
                   const tr = videos.reduce((s,v) => s + v.totalRev, 0);
@@ -307,7 +321,7 @@ function renderVideos(videos) {
                   return `<span class="${roasClass(r)}" style="font-size:14px">${r.toFixed(2)}x</span>`;
                 })()}
               </td>
-              <td style="padding:10px 8px">
+              <td style="${sD(5,'#f8f9fe')}padding:10px 8px">
                 ${videos.reduce((s,v) => s + v.totalOrders, 0).toLocaleString('id-ID')}
               </td>
               ${allBulan.map(b => {
