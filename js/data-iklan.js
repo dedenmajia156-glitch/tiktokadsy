@@ -32,11 +32,19 @@ async function loadFilters() {
     selProduk.appendChild(opt);
   });
 
-  // Isi filter bulan dari data existing
+  // Isi filter bulan dari data existing — pakai fetchAllRows biar tidak kena limit 1000
   let qb = db().from('ads_data').select('bulan').order('bulan');
   if (profile?.role !== 'admin') qb = qb.eq('user_id', uid);
-  const { data: bd } = await qb;
+  const bd = await fetchAllRows(qb);
+  const bulanOrder = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
   const bulanSet = [...new Set((bd || []).map(r => r.bulan).filter(Boolean))];
+  bulanSet.sort((a, b) => {
+    const parse = s => {
+      const p = s.split(' ');
+      return (parseInt(p[1]) || 0) * 100 + bulanOrder.indexOf(p[0]);
+    };
+    return parse(b) - parse(a); // terbaru dulu
+  });
   const selBulan = document.getElementById('fil-bulan');
   bulanSet.forEach(b => {
     const opt = document.createElement('option');
