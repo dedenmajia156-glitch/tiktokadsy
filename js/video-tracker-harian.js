@@ -99,13 +99,9 @@ async function loadData() {
   prev.setDate(prev.getDate() - 1);
   const extraDate = toDateStr(prev);
 
-  clearVthCache(); // DEBUG: force fresh fetch
-  const ckey = `gmv_vth3_${uid}_${extraDate}_${dateTo}_${produkId || 'all'}`;
-  console.log('[VTH] ckey:', ckey);
+  const ckey = `gmv_vth4_${uid}_${extraDate}_${dateTo}_${produkId || 'all'}`;
   const cached = vthGetCache(ckey);
-  console.log('[VTH] cache hit?', !!cached);
   if (cached) {
-    console.log('[VTH] from cache, sample day_data keys:', Object.keys(cached[0]?.day_data || {}).slice(0,3));
     allData = cached;
     currentPage = 0;
     processAndRender();
@@ -116,30 +112,39 @@ async function loadData() {
   document.getElementById('harian-pagination').style.display = 'none';
 
   try {
-    const rpcParams = {
-      p_user_id:    (profile?.role !== 'admin' || window.__activeAdvertiser) ? uid : null,
-      p_product_id: produkId || null,
-      p_date_from:  extraDate,
-      p_date_to:    dateTo,
-    };
-    // Debug: cek data langsung dari tabel
-    const { data: directCheck } = await db().from('ads_data_harian')
-      .select('video_id, tanggal, cost, gross_revenue, orders')
-      .eq('user_id', uid).gt('cost', 0).limit(3);
-    console.log('[VTH] direct table check (cost>0):', directCheck);
+    let q = db().from('ads_data_harian')
+      .select('video_id, video_title, tiktok_account, product_id, tanggal, cost, gross_revenue, orders')
+      .gte('tanggal', extraDate)
+      .lte('tanggal', dateTo)
+      .order('tanggal', { ascending: true });
 
-    const { data: rpcData, error: rpcErr } = await db().rpc('get_video_tracker_harian', rpcParams);
-    console.log('[VTH] rpcParams:', rpcParams);
-    console.log('[VTH] rpcErr:', rpcErr);
-    console.log('[VTH] rpcData count:', rpcData?.length);
-    if (rpcData?.[0]) {
-      console.log('[VTH] sample video_id:', rpcData[0].video_id);
-      const keys = Object.keys(rpcData[0].day_data || {});
-      console.log('[VTH] day_data keys sample:', keys.slice(0,3));
-    }
-    if (rpcErr) throw new Error(rpcErr.message);
+    if (profile?.role !== 'admin' || window.__activeAdvertiser) q = q.eq('user_id', uid);
+    if (produkId) q = q.eq('product_id', produkId);
 
-    allData = rpcData || [];
+    const rawRows = await fetchAllRows(q);
+
+    // Susun per-video dengan day_data map
+    const videoMap = {};
+    rawRows.forEach(row => {
+      const vid = row.video_id || 'unknown';
+      if (!videoMap[vid]) {
+        videoMap[vid] = {
+          video_id:       vid,
+          video_title:    row.video_title || '',
+          tiktok_account: row.tiktok_account || '',
+          product_id:     row.product_id,
+          product_name:   userProducts.find(p => p.id === row.product_id)?.nama_produk || '',
+          day_data:       {}
+        };
+      }
+      const d = row.tanggal;
+      if (!videoMap[vid].day_data[d]) videoMap[vid].day_data[d] = { cost: 0, gross_revenue: 0, orders: 0 };
+      videoMap[vid].day_data[d].cost          += Number(row.cost) || 0;
+      videoMap[vid].day_data[d].gross_revenue += Number(row.gross_revenue) || 0;
+      videoMap[vid].day_data[d].orders        += Number(row.orders) || 0;
+    });
+
+    allData = Object.values(videoMap);
     vthSetCache(ckey, allData);
     currentPage = 0;
     processAndRender();
@@ -155,7 +160,6 @@ function processAndRender() {
   const search = document.getElementById('fil-search').value.trim().toLowerCase();
   const roasFilter = document.getElementById('fil-roas-status').value;
 
-  console.log('[VTH] processAndRender - allData:', allData.length, 'dateFrom:', dateFrom, 'dateTo:', dateTo);
   // allData sudah berupa array per-video dari RPC (day_data = map tanggal → {cost, gross_revenue, orders})
   let videos = allData.filter(v => {
     // Hanya tampilkan video yang punya data di rentang dateFrom-dateTo
@@ -201,7 +205,6 @@ function processAndRender() {
     return avg(b) - avg(a);
   });
 
-  console.log('[VTH] after filter:', videos.length, 'videos');
   filteredVideos = videos;
   renderSummaryStats(videos, dateFrom, dateTo);
   const pageVids = videos.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
@@ -316,16 +319,14 @@ function renderVideoCards(videos, dateFrom, dateTo) {
             </tr>
           </thead>
           <tbody>
-            ${videos.map((v, vi) => {
+            ${videos.map(v => {
               const dayData = v.day_data || {};
               const thr = prodThresholds[v.product_id] || { high: 3, mid: 1.5 };
               const prodName = v.product_name || '—';
 
               const inRangeDates = Object.keys(dayData).filter(d => d >= dateFrom && d <= dateTo);
-              if (vi === 0) console.log('[VTH] v[0] inRangeDates:', inRangeDates, 'sample raw:', inRangeDates[0] ? dayData[inRangeDates[0]] : 'none');
               const totalCost   = inRangeDates.reduce((s, d) => s + (Number(dayData[d].cost) || 0), 0);
               const totalRev    = inRangeDates.reduce((s, d) => s + (Number(dayData[d].gross_revenue) || 0), 0);
-              if (vi === 0) console.log('[VTH] v[0] totalCost:', totalCost, 'totalRev:', totalRev);
               const totalOrders = inRangeDates.reduce((s, d) => s + (Number(dayData[d].orders) || 0), 0);
               const avgRoas     = totalCost > 0 ? totalRev / totalCost : 0;
 
