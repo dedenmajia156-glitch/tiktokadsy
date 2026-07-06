@@ -7,6 +7,23 @@ let parsedRows = [];
 let currentPage = 0;
 const PAGE_SIZE = 15;
 
+const VTH_CACHE_TTL = 5 * 60 * 1000; // 5 menit
+function vthGetCache(key) {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const { ts, data } = JSON.parse(raw);
+    if (Date.now() - ts > VTH_CACHE_TTL) { sessionStorage.removeItem(key); return null; }
+    return data;
+  } catch(_) { return null; }
+}
+function vthSetCache(key, data) {
+  try { sessionStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch(_) {}
+}
+function clearVthCache() {
+  Object.keys(sessionStorage).filter(k => k.startsWith('gmv_vth_')).forEach(k => sessionStorage.removeItem(k));
+}
+
 (async () => {
   profile = await initPage('tracker-harian', 'Video Tracker Harian');
   await loadProducts();
@@ -16,6 +33,7 @@ const PAGE_SIZE = 15;
 })();
 
 window.addEventListener('advertiserSwitch', async () => {
+  clearVthCache();
   document.getElementById('fil-produk').innerHTML = '<option value="">Semua Produk</option>';
   userProducts = [];
   prodThresholds = {};
@@ -80,6 +98,15 @@ async function loadData() {
   prev.setDate(prev.getDate() - 1);
   const extraDate = toDateStr(prev);
 
+  const ckey = `gmv_vth_${uid}_${extraDate}_${dateTo}_${produkId || 'all'}`;
+  const cached = vthGetCache(ckey);
+  if (cached) {
+    allData = cached;
+    currentPage = 0;
+    processAndRender();
+    return;
+  }
+
   document.getElementById('video-list').innerHTML = '<div class="loader"><div class="spinner"></div></div>';
   document.getElementById('harian-pagination').style.display = 'none';
 
@@ -94,6 +121,7 @@ async function loadData() {
     if (produkId) q = q.eq('product_id', produkId);
 
     allData = await fetchAllRows(q);
+    vthSetCache(ckey, allData);
     currentPage = 0;
     processAndRender();
   } catch(e) {
@@ -549,6 +577,7 @@ async function doUploadHarian() {
   if (errMsg) { showErrH(errEl, 'Gagal upload: ' + errMsg); return; }
 
   showToast(`${parsedRows.length} data harian (${tanggal}) berhasil diupload!`, 'success');
+  clearVthCache(); // data baru, invalidate cache harian
   Object.keys(sessionStorage).filter(k => k.startsWith('gmv_dash_') || k.startsWith('gmv_chart_')).forEach(k => sessionStorage.removeItem(k));
   closeUploadModal();
   await loadData();

@@ -422,7 +422,10 @@ async function doUpload() {
 
   showToast(`${parsedRows.length} data berhasil diupload!`, 'success');
   // Invalidate dashboard cache
-  Object.keys(sessionStorage).filter(k => k.startsWith('gmv_dash_') || k.startsWith('gmv_chart_')).forEach(k => sessionStorage.removeItem(k));
+  Object.keys(sessionStorage).filter(k =>
+    k.startsWith('gmv_dash_') || k.startsWith('gmv_chart_') ||
+    k.startsWith('gmv_vt_')   || k.startsWith('gmv_vth_')
+  ).forEach(k => sessionStorage.removeItem(k));
   closeUpload();
 
   // Refresh filter bulan

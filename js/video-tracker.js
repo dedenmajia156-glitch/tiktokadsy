@@ -6,6 +6,23 @@ let prodTiktokId = {};   // product_id → product_id_tiktok
 let allVideos = []; // semua video setelah filter, untuk pagination
 let vtPage = 0;
 
+const VT_CACHE_TTL = 5 * 60 * 1000; // 5 menit
+function vtGetCache(key) {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const { ts, data } = JSON.parse(raw);
+    if (Date.now() - ts > VT_CACHE_TTL) { sessionStorage.removeItem(key); return null; }
+    return data;
+  } catch(_) { return null; }
+}
+function vtSetCache(key, data) {
+  try { sessionStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch(_) {}
+}
+function clearVtCache() {
+  Object.keys(sessionStorage).filter(k => k.startsWith('gmv_vt_')).forEach(k => sessionStorage.removeItem(k));
+}
+
 (async () => {
   profile = await initPage('video-tracker', 'Video Tracker');
   await loadFilters();
@@ -15,6 +32,7 @@ let vtPage = 0;
 
 // Re-load ketika admin ganti advertiser
 window.addEventListener('advertiserSwitch', async () => {
+  clearVtCache();
   document.getElementById('fil-produk').innerHTML = '<option value="">Semua Produk</option>';
   prodThresholds = {};
   prodTiktokId = {};
@@ -67,18 +85,38 @@ async function loadVideos() {
   const filRoas   = document.getElementById('fil-roas').value;
   const filStatus = document.getElementById('fil-status').value;
 
-  let q = db().from('ads_data')
-    .select('*, products(nama_produk)')
-    .not('video_id', 'is', null)
-    .neq('video_id', 'N/A')
-    .gt('cost', 0);
+  const ckey = `gmv_vt_${uid}_${produkId || 'all'}`;
+  let data, decisionsRaw;
 
-  if (profile?.role !== 'admin' || window.__activeAdvertiser) q = q.eq('user_id', uid);
-  if (produkId) q = q.eq('product_id', produkId);
+  const cached = vtGetCache(ckey);
+  if (cached) {
+    data = cached.data;
+    decisionsRaw = cached.decisions;
+  } else {
+    document.getElementById('video-list').innerHTML = '<div class="loader"><div class="spinner"></div></div>';
 
-  let data;
-  try { data = await fetchAllRows(q); }
-  catch(e) { showToast('Gagal load: ' + e.message, 'error'); return; }
+    let q = db().from('ads_data')
+      .select('*, products(nama_produk)')
+      .not('video_id', 'is', null)
+      .neq('video_id', 'N/A')
+      .gt('cost', 0);
+
+    if (profile?.role !== 'admin' || window.__activeAdvertiser) q = q.eq('user_id', uid);
+    if (produkId) q = q.eq('product_id', produkId);
+
+    try { data = await fetchAllRows(q); }
+    catch(e) { showToast('Gagal load: ' + e.message, 'error'); return; }
+
+    // Load decisions sekalian
+    let dq = db().from('video_decisions')
+      .select('video_id, keputusan, waktu_mulai, hasil')
+      .order('created_at', { ascending: false });
+    if (profile?.role !== 'admin') dq = dq.eq('user_id', uid);
+    const { data: dec } = await dq;
+    decisionsRaw = dec || [];
+
+    vtSetCache(ckey, { data, decisions: decisionsRaw });
+  }
 
   // Aggregate per video_id
   const vmap = {};
@@ -106,15 +144,8 @@ async function loadVideos() {
     vmap[vid].bulanData[r.bulan].rev  += Number(r.gross_revenue) || 0;
   });
 
-  // Load last decision per video
-  let dq = db().from('video_decisions')
-    .select('video_id, keputusan, waktu_mulai, hasil')
-    .order('created_at', { ascending: false });
-  if (profile?.role !== 'admin') dq = dq.eq('user_id', uid);
-  const { data: decisions } = await dq;
-
   const lastDecision = {};
-  (decisions || []).forEach(d => {
+  (decisionsRaw || []).forEach(d => {
     if (!lastDecision[d.video_id]) lastDecision[d.video_id] = d;
   });
 
@@ -425,6 +456,7 @@ async function saveDecision() {
 
   if (error) { showErr(errEl, error.message); return; }
 
+  clearVtCache(); // decisions berubah, paksa re-fetch
   showToast(`Keputusan "${keputusan}" disimpan!`, 'success');
   closeDecisionModal();
   await loadVideos();
