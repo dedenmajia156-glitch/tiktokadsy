@@ -27,13 +27,25 @@ function clearVthCache() {
 
 
 (async () => {
-  clearVthCache(); // bersihkan cache lama saat init
+  clearVthCache();
   profile = await initPage('tracker-harian', 'Video Tracker Harian');
+  injectUploadBtn();
   await loadProducts();
   setupFilters();
   setDefaultDates();
   await loadData();
 })();
+
+function injectUploadBtn() {
+  const actions = document.querySelector('.topbar-actions');
+  if (!actions) return;
+  const btn = document.createElement('button');
+  btn.className = 'btn btn-primary-sm';
+  btn.style.cssText = 'font-size:13px;padding:7px 14px;flex-shrink:0';
+  btn.innerHTML = '📤 Upload';
+  btn.onclick = openUploadModal;
+  actions.prepend(btn);
+}
 
 window.addEventListener('advertiserSwitch', async () => {
   clearVthCache();
@@ -83,7 +95,7 @@ function setDefaultDates() {
 
 function setupFilters() {
   document.getElementById('btn-load').addEventListener('click', () => { currentPage = 0; loadData(); });
-  ['fil-produk', 'fil-roas-status'].forEach(id => {
+  ['fil-produk', 'fil-roas-status', 'fil-sort'].forEach(id => {
     document.getElementById(id).addEventListener('change', () => { currentPage = 0; processAndRender(); });
   });
   document.getElementById('fil-search').addEventListener('input', () => { currentPage = 0; processAndRender(); });
@@ -207,6 +219,25 @@ function setLoadingMoreBanner(show) {
   }
 }
 
+function applySortVideos(videos, dateFrom, dateTo) {
+  const sort = document.getElementById('fil-sort')?.value || 'roas_desc';
+  return videos.sort((a, b) => {
+    const calc = v => {
+      const days = v.day_data || {};
+      const inRange = Object.keys(days).filter(d => d >= dateFrom && d <= dateTo);
+      const tc = inRange.reduce((s, d) => s + (Number(days[d].cost) || 0), 0);
+      const tr = inRange.reduce((s, d) => s + (Number(days[d].gross_revenue) || 0), 0);
+      return { tc, tr, roas: tc > 0 ? tr / tc : 0 };
+    };
+    const ca = calc(a), cb = calc(b);
+    if (sort === 'roas_desc')    return cb.roas - ca.roas;
+    if (sort === 'roas_asc')     return ca.roas - cb.roas;
+    if (sort === 'revenue_desc') return cb.tr - ca.tr;
+    if (sort === 'cost_desc')    return cb.tc - ca.tc;
+    return cb.roas - ca.roas;
+  });
+}
+
 function renderStatCards(totalCost, totalRev, avgRoas, videoAktif) {
   const el = document.getElementById('harian-stats');
   el.innerHTML = `
@@ -254,19 +285,9 @@ function renderTableOnly(dateFrom, dateTo) {
       return true;
     });
   }
-  videos.sort((a, b) => {
-    const avg = v => {
-      const days = v.day_data || {};
-      const inRange = Object.keys(days).filter(d => d >= dateFrom && d <= dateTo);
-      const tc = inRange.reduce((s, d) => s + (Number(days[d].cost) || 0), 0);
-      const tr = inRange.reduce((s, d) => s + (Number(days[d].gross_revenue) || 0), 0);
-      return tc > 0 ? tr / tc : 0;
-    };
-    return avg(b) - avg(a);
-  });
-  filteredVideos = videos;
-  renderVideoCards(videos.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE), dateFrom, dateTo);
-  renderHarianPagination(videos.length);
+  filteredVideos = applySortVideos(videos, dateFrom, dateTo);
+  renderVideoCards(filteredVideos.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE), dateFrom, dateTo);
+  renderHarianPagination(filteredVideos.length);
 }
 
 function processAndRender() {
@@ -308,20 +329,8 @@ function processAndRender() {
     });
   }
 
-  // Sort by avg ROAS tertinggi
-  videos.sort((a, b) => {
-    const avg = v => {
-      const days = v.day_data || {};
-      const inRange = Object.keys(days).filter(d => d >= dateFrom && d <= dateTo);
-      const tc = inRange.reduce((s, d) => s + (Number(days[d].cost) || 0), 0);
-      const tr = inRange.reduce((s, d) => s + (Number(days[d].gross_revenue) || 0), 0);
-      return tc > 0 ? tr / tc : 0;
-    };
-    return avg(b) - avg(a);
-  });
-
-  filteredVideos = videos;
-  renderSummaryStats(videos, dateFrom, dateTo);
+  filteredVideos = applySortVideos(videos, dateFrom, dateTo);
+  renderSummaryStats(filteredVideos, dateFrom, dateTo);
   const pageVids = videos.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
   renderVideoCards(pageVids, dateFrom, dateTo);
   renderHarianPagination(videos.length);
