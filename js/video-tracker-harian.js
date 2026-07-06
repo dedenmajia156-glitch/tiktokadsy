@@ -309,14 +309,16 @@ function renderVideoCards(videos, dateFrom, dateTo) {
             </tr>
           </thead>
           <tbody>
-            ${videos.map(v => {
+            ${videos.map((v, vi) => {
               const dayData = v.day_data || {};
               const thr = prodThresholds[v.product_id] || { high: 3, mid: 1.5 };
               const prodName = v.product_name || '—';
 
               const inRangeDates = Object.keys(dayData).filter(d => d >= dateFrom && d <= dateTo);
+              if (vi === 0) console.log('[VTH] v[0] inRangeDates:', inRangeDates, 'sample raw:', inRangeDates[0] ? dayData[inRangeDates[0]] : 'none');
               const totalCost   = inRangeDates.reduce((s, d) => s + (Number(dayData[d].cost) || 0), 0);
               const totalRev    = inRangeDates.reduce((s, d) => s + (Number(dayData[d].gross_revenue) || 0), 0);
+              if (vi === 0) console.log('[VTH] v[0] totalCost:', totalCost, 'totalRev:', totalRev);
               const totalOrders = inRangeDates.reduce((s, d) => s + (Number(dayData[d].orders) || 0), 0);
               const avgRoas     = totalCost > 0 ? totalRev / totalCost : 0;
 
