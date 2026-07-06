@@ -21,8 +21,9 @@ function vthSetCache(key, data) {
   try { sessionStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch(_) {}
 }
 function clearVthCache() {
-  Object.keys(sessionStorage).filter(k => k.startsWith('gmv_vth_')).forEach(k => sessionStorage.removeItem(k));
+  Object.keys(sessionStorage).filter(k => k.startsWith('gmv_vth')).forEach(k => sessionStorage.removeItem(k));
 }
+
 
 (async () => {
   profile = await initPage('tracker-harian', 'Video Tracker Harian');
@@ -98,7 +99,7 @@ async function loadData() {
   prev.setDate(prev.getDate() - 1);
   const extraDate = toDateStr(prev);
 
-  const ckey = `gmv_vth_${uid}_${extraDate}_${dateTo}_${produkId || 'all'}`;
+  const ckey = `gmv_vth2_${uid}_${extraDate}_${dateTo}_${produkId || 'all'}`;
   const cached = vthGetCache(ckey);
   if (cached) {
     allData = cached;
@@ -111,12 +112,6 @@ async function loadData() {
   document.getElementById('harian-pagination').style.display = 'none';
 
   try {
-    let q = db().from('ads_data_harian')
-      .select('*')
-      .gte('tanggal', extraDate)
-      .lte('tanggal', dateTo)
-      .order('tanggal', { ascending: true });
-
     const rpcParams = {
       p_user_id:    (profile?.role !== 'admin' || window.__activeAdvertiser) ? uid : null,
       p_product_id: produkId || null,
