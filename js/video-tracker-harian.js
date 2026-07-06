@@ -150,40 +150,18 @@ async function loadData() {
   }
 
   try {
-    // === Stats query + batch pertama: keduanya jalan, tapi ditangani terpisah ===
-    let aggQ = db().from('ads_data_harian')
-      .select('cost, gross_revenue, video_id')
-      .gte('tanggal', dateFrom).lte('tanggal', dateTo);
-    if (profile?.role !== 'admin' || window.__activeAdvertiser) aggQ = aggQ.eq('user_id', uid);
-    if (produkId) aggQ = aggQ.eq('product_id', produkId);
-
-    // Fire keduanya sekaligus, tapi jangan tunggu aggQ
-    const aggPromise = fetchAllRows(aggQ);
+    // Batch pertama → langsung render
     const firstRes = await buildQuery(0);
     if (_loadToken !== myToken) return;
     if (firstRes.error) throw firstRes.error;
 
-    // Tabel langsung render dari batch pertama (tidak tunggu aggQ)
-    const firstRows = firstRes.data || [];
-    mergeRows(firstRows);
+    mergeRows(firstRes.data || []);
     allData = Object.values(videoMap);
     currentPage = 0;
-    renderTableOnly(dateFrom, dateTo);
+    processAndRender();
 
-    // Stats: tunggu aggQ (mungkin sudah selesai duluan karena kolom lebih sedikit)
-    const aggRows = await aggPromise;
-    if (_loadToken !== myToken) return;
-    let totalCost = 0, totalRev = 0, videoSet = new Set();
-    aggRows.forEach(r => {
-      totalCost += Number(r.cost) || 0;
-      totalRev  += Number(r.gross_revenue) || 0;
-      if (r.video_id && (Number(r.cost) || 0) > 0) videoSet.add(r.video_id);
-    });
-    const avgRoas = totalCost > 0 ? totalRev / totalCost : 0;
-    renderStatCards(totalCost, totalRev, avgRoas, videoSet.size);
-
-    // === Sisa data: load di background (tabel saja, stats sudah fix) ===
-    if (firstRows.length >= BATCH) {
+    // Sisa data → background, stats update tiap batch
+    if ((firstRes.data?.length || 0) >= BATCH) {
       setLoadingMoreBanner(true);
       let offset = BATCH;
 
@@ -194,16 +172,17 @@ async function loadData() {
 
         mergeRows(moreRows);
         allData = Object.values(videoMap);
+        processAndRender();
 
         if (moreRows.length < BATCH) break;
         offset += BATCH;
       }
 
       setLoadingMoreBanner(false);
-      renderTableOnly(dateFrom, dateTo);
     }
 
     vthSetCache(ckey, allData);
+    showToast(`${allData.length} video berhasil dimuat`, 'success');
   } catch(e) {
     if (_loadToken !== myToken) return;
     showToast('Gagal load data: ' + e.message, 'error');
