@@ -121,8 +121,12 @@ async function loadData() {
     const { data: rpcData, error: rpcErr } = await db().rpc('get_video_tracker_harian', rpcParams);
     console.log('[VTH] rpcParams:', rpcParams);
     console.log('[VTH] rpcErr:', rpcErr);
-    console.log('[VTH] rpcData:', rpcData);
-    if (rpcData?.[0]) console.log('[VTH] sample day_data:', rpcData[0].day_data);
+    console.log('[VTH] rpcData count:', rpcData?.length);
+    if (rpcData?.[0]) {
+      console.log('[VTH] sample video_id:', rpcData[0].video_id);
+      const keys = Object.keys(rpcData[0].day_data || {});
+      console.log('[VTH] day_data keys sample:', keys.slice(0,3));
+    }
     if (rpcErr) throw new Error(rpcErr.message);
 
     allData = rpcData || [];
@@ -141,6 +145,7 @@ function processAndRender() {
   const search = document.getElementById('fil-search').value.trim().toLowerCase();
   const roasFilter = document.getElementById('fil-roas-status').value;
 
+  console.log('[VTH] processAndRender - allData:', allData.length, 'dateFrom:', dateFrom, 'dateTo:', dateTo);
   // allData sudah berupa array per-video dari RPC (day_data = map tanggal → {cost, gross_revenue, orders})
   let videos = allData.filter(v => {
     // Hanya tampilkan video yang punya data di rentang dateFrom-dateTo
@@ -186,6 +191,7 @@ function processAndRender() {
     return avg(b) - avg(a);
   });
 
+  console.log('[VTH] after filter:', videos.length, 'videos');
   filteredVideos = videos;
   renderSummaryStats(videos, dateFrom, dateTo);
   const pageVids = videos.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
