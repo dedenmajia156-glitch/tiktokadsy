@@ -119,6 +119,10 @@ async function loadData() {
       p_date_to:    dateTo,
     };
     const { data: rpcData, error: rpcErr } = await db().rpc('get_video_tracker_harian', rpcParams);
+    console.log('[VTH] rpcParams:', rpcParams);
+    console.log('[VTH] rpcErr:', rpcErr);
+    console.log('[VTH] rpcData:', rpcData);
+    if (rpcData?.[0]) console.log('[VTH] sample day_data:', rpcData[0].day_data);
     if (rpcErr) throw new Error(rpcErr.message);
 
     allData = rpcData || [];
