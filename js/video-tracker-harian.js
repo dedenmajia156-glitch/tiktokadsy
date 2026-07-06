@@ -100,8 +100,11 @@ async function loadData() {
   const extraDate = toDateStr(prev);
 
   const ckey = `gmv_vth3_${uid}_${extraDate}_${dateTo}_${produkId || 'all'}`;
+  console.log('[VTH] ckey:', ckey);
   const cached = vthGetCache(ckey);
+  console.log('[VTH] cache hit?', !!cached);
   if (cached) {
+    console.log('[VTH] from cache, sample day_data keys:', Object.keys(cached[0]?.day_data || {}).slice(0,3));
     allData = cached;
     currentPage = 0;
     processAndRender();
