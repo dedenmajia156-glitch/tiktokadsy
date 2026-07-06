@@ -159,11 +159,13 @@ function processAndRender() {
       const inRange = Object.keys(days).filter(d => d >= dateFrom && d <= dateTo).sort();
       if (!inRange.length) return false;
       const latest = days[inRange[inRange.length - 1]];
-      const roas = latest.cost > 0 ? latest.gross_revenue / latest.cost : 0;
+      const latestCost = Number(latest.cost) || 0;
+      const latestRev  = Number(latest.gross_revenue) || 0;
+      const roas = latestCost > 0 ? latestRev / latestCost : 0;
       const thr = prodThresholds[v.product_id] || { high: 3, mid: 1.5 };
       if (roasFilter === 'bagus')   return roas >= thr.high;
       if (roasFilter === 'monitor') return roas >= thr.mid && roas < thr.high;
-      if (roasFilter === 'boncos')  return latest.cost > 0 && roas < thr.mid;
+      if (roasFilter === 'boncos')  return latestCost > 0 && roas < thr.mid;
       return true;
     });
   }
@@ -173,8 +175,8 @@ function processAndRender() {
     const avg = v => {
       const days = v.day_data || {};
       const inRange = Object.keys(days).filter(d => d >= dateFrom && d <= dateTo);
-      const tc = inRange.reduce((s, d) => s + (days[d].cost || 0), 0);
-      const tr = inRange.reduce((s, d) => s + (days[d].gross_revenue || 0), 0);
+      const tc = inRange.reduce((s, d) => s + (Number(days[d].cost) || 0), 0);
+      const tr = inRange.reduce((s, d) => s + (Number(days[d].gross_revenue) || 0), 0);
       return tc > 0 ? tr / tc : 0;
     };
     return avg(b) - avg(a);
@@ -195,8 +197,8 @@ function renderSummaryStats(videos, dateFrom, dateTo) {
   videos.forEach(v => {
     const days = v.day_data || {};
     const inRange = Object.keys(days).filter(d => d >= dateFrom && d <= dateTo);
-    const cost = inRange.reduce((s, d) => s + (days[d].cost || 0), 0);
-    const rev  = inRange.reduce((s, d) => s + (days[d].gross_revenue || 0), 0);
+    const cost = inRange.reduce((s, d) => s + (Number(days[d].cost) || 0), 0);
+    const rev  = inRange.reduce((s, d) => s + (Number(days[d].gross_revenue) || 0), 0);
     if (cost > 0) videoAktif++;
     totalCost += cost;
     totalRev  += rev;
@@ -300,32 +302,36 @@ function renderVideoCards(videos, dateFrom, dateTo) {
               const prodName = v.product_name || '—';
 
               const inRangeDates = Object.keys(dayData).filter(d => d >= dateFrom && d <= dateTo);
-              const totalCost   = inRangeDates.reduce((s, d) => s + (dayData[d].cost || 0), 0);
-              const totalRev    = inRangeDates.reduce((s, d) => s + (dayData[d].gross_revenue || 0), 0);
-              const totalOrders = inRangeDates.reduce((s, d) => s + (dayData[d].orders || 0), 0);
+              const totalCost   = inRangeDates.reduce((s, d) => s + (Number(dayData[d].cost) || 0), 0);
+              const totalRev    = inRangeDates.reduce((s, d) => s + (Number(dayData[d].gross_revenue) || 0), 0);
+              const totalOrders = inRangeDates.reduce((s, d) => s + (Number(dayData[d].orders) || 0), 0);
               const avgRoas     = totalCost > 0 ? totalRev / totalCost : 0;
 
               const dateCols = dates.map(d => {
                 const row = dayData[d];
-                if (!row || row.cost <= 0) return `<td style="text-align:center;color:#cbd5e1;font-size:12px">-</td>`;
+                const rowCost = Number(row?.cost) || 0;
+                const rowRev  = Number(row?.gross_revenue) || 0;
+                if (!row || rowCost <= 0) return `<td style="text-align:center;color:#cbd5e1;font-size:12px">-</td>`;
 
-                const roas = row.gross_revenue / row.cost;
+                const roas = rowRev / rowCost;
 
                 // Delta ROAS vs hari sebelumnya
                 const prevD = new Date(d + 'T00:00:00');
                 prevD.setDate(prevD.getDate() - 1);
                 const prevRow = dayData[toDateStr(prevD)];
+                const prevCost = Number(prevRow?.cost) || 0;
+                const prevRev  = Number(prevRow?.gross_revenue) || 0;
                 let deltaHTML = '';
-                if (prevRow && prevRow.cost > 0) {
-                  const delta = roas - (prevRow.gross_revenue / prevRow.cost);
+                if (prevRow && prevCost > 0) {
+                  const delta = roas - (prevRev / prevCost);
                   const col = delta >= 0 ? '#10b981' : '#ef4444';
                   deltaHTML = `<div style="font-size:10px;color:${col};margin-top:2px">${delta >= 0 ? '↑' : '↓'}${Math.abs(delta).toFixed(1)}</div>`;
                 }
 
                 return `<td style="text-align:center;padding:5px 6px;vertical-align:middle">
                   <div class="${roasClass(roas, thr.high, thr.mid)} num" style="font-size:12px;font-weight:700">${roas.toFixed(1)}x</div>
-                  <div style="font-size:10px;color:#64748b;margin-top:1px">${fmtRp(row.cost)}</div>
-                  <div style="font-size:10px;color:#10b981">${fmtRp(row.gross_revenue)}</div>
+                  <div style="font-size:10px;color:#64748b;margin-top:1px">${fmtRp(rowCost)}</div>
+                  <div style="font-size:10px;color:#10b981">${fmtRp(rowRev)}</div>
                   ${deltaHTML}
                 </td>`;
               }).join('');
