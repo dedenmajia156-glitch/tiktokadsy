@@ -86,62 +86,52 @@ async function loadVideos() {
   const filStatus = document.getElementById('fil-status').value;
 
   const ckey = `gmv_vt_${uid}_${produkId || 'all'}`;
-  let data, decisionsRaw;
+  let rows, decisionsRaw;
 
   const cached = vtGetCache(ckey);
   if (cached) {
-    data = cached.data;
+    rows = cached.rows;
     decisionsRaw = cached.decisions;
   } else {
     document.getElementById('video-list').innerHTML = '<div class="loader"><div class="spinner"></div></div>';
 
-    let q = db().from('ads_data')
-      .select('*, products(nama_produk)')
-      .not('video_id', 'is', null)
-      .neq('video_id', 'N/A')
-      .gt('cost', 0);
+    // Pakai RPC — aggregasi di server, 1 request vs ribuan baris
+    const rpcParams = {
+      p_user_id: (profile?.role !== 'admin' || window.__activeAdvertiser) ? uid : null,
+      p_product_id: produkId || null,
+    };
 
-    if (profile?.role !== 'admin' || window.__activeAdvertiser) q = q.eq('user_id', uid);
-    if (produkId) q = q.eq('product_id', produkId);
-
-    try { data = await fetchAllRows(q); }
-    catch(e) { showToast('Gagal load: ' + e.message, 'error'); return; }
-
-    // Load decisions sekalian
     let dq = db().from('video_decisions')
       .select('video_id, keputusan, waktu_mulai, hasil')
       .order('created_at', { ascending: false });
     if (profile?.role !== 'admin') dq = dq.eq('user_id', uid);
-    const { data: dec } = await dq;
+
+    const [{ data: rpcData, error: rpcErr }, { data: dec }] = await Promise.all([
+      db().rpc('get_video_tracker', rpcParams),
+      dq,
+    ]);
+
+    if (rpcErr) { showToast('Gagal load: ' + rpcErr.message, 'error'); return; }
+    rows = rpcData || [];
     decisionsRaw = dec || [];
 
-    vtSetCache(ckey, { data, decisions: decisionsRaw });
+    vtSetCache(ckey, { rows, decisions: decisionsRaw });
   }
 
-  // Aggregate per video_id
+  // Map langsung dari hasil RPC (sudah di-aggregate server-side)
   const vmap = {};
-  (data || []).forEach(r => {
-    const vid = r.video_id;
-    if (!vmap[vid]) {
-      vmap[vid] = {
-        vid,
-        title: r.video_title || '',
-        account: r.tiktok_account || '',
-        produk: r.products?.nama_produk || '',
-        product_id: r.product_id,
-        bulanData: {},
-        totalCost: 0,
-        totalRev: 0,
-        totalOrders: 0,
-        status: r.status || '',
-      };
-    }
-    vmap[vid].totalCost += Number(r.cost) || 0;
-    vmap[vid].totalRev  += Number(r.gross_revenue) || 0;
-    vmap[vid].totalOrders += Number(r.orders) || 0;
-    if (!vmap[vid].bulanData[r.bulan]) vmap[vid].bulanData[r.bulan] = { cost: 0, rev: 0 };
-    vmap[vid].bulanData[r.bulan].cost += Number(r.cost) || 0;
-    vmap[vid].bulanData[r.bulan].rev  += Number(r.gross_revenue) || 0;
+  rows.forEach(r => {
+    vmap[r.video_id] = {
+      vid:        r.video_id,
+      title:      r.video_title || '',
+      account:    r.tiktok_account || '',
+      produk:     r.product_name || '',
+      product_id: r.product_id,
+      bulanData:  r.bulan_data || {},
+      totalCost:  Number(r.total_cost) || 0,
+      totalRev:   Number(r.total_rev) || 0,
+      totalOrders: Number(r.total_orders) || 0,
+    };
   });
 
   const lastDecision = {};
