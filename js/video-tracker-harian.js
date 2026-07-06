@@ -117,10 +117,16 @@ async function loadData() {
       .lte('tanggal', dateTo)
       .order('tanggal', { ascending: true });
 
-    if (profile?.role !== 'admin' || window.__activeAdvertiser) q = q.eq('user_id', uid);
-    if (produkId) q = q.eq('product_id', produkId);
+    const rpcParams = {
+      p_user_id:    (profile?.role !== 'admin' || window.__activeAdvertiser) ? uid : null,
+      p_product_id: produkId || null,
+      p_date_from:  extraDate,
+      p_date_to:    dateTo,
+    };
+    const { data: rpcData, error: rpcErr } = await db().rpc('get_video_tracker_harian', rpcParams);
+    if (rpcErr) throw new Error(rpcErr.message);
 
-    allData = await fetchAllRows(q);
+    allData = rpcData || [];
     vthSetCache(ckey, allData);
     currentPage = 0;
     processAndRender();
@@ -136,52 +142,33 @@ function processAndRender() {
   const search = document.getElementById('fil-search').value.trim().toLowerCase();
   const roasFilter = document.getElementById('fil-roas-status').value;
 
-  // Build map per video_id (semua data termasuk extra day)
-  const videoMap = {};
-  allData.forEach(row => {
-    const key = row.video_id || 'unknown';
-    if (!videoMap[key]) {
-      videoMap[key] = {
-        video_id: key,
-        video_title: row.video_title || key,
-        tiktok_account: row.tiktok_account || '',
-        product_id: row.product_id,
-        product_id_raw: row.product_id_raw || '',
-        rows: []
-      };
-    }
-    // Update meta dari row terbaru
-    if (row.video_title) videoMap[key].video_title = row.video_title;
-    if (row.tiktok_account) videoMap[key].tiktok_account = row.tiktok_account;
-    if (row.product_id) videoMap[key].product_id = row.product_id;
-    videoMap[key].rows.push(row);
+  // allData sudah berupa array per-video dari RPC (day_data = map tanggal → {cost, gross_revenue, orders})
+  let videos = allData.filter(v => {
+    // Hanya tampilkan video yang punya data di rentang dateFrom-dateTo
+    return Object.keys(v.day_data || {}).some(d => d >= dateFrom && d <= dateTo);
   });
-
-  let videos = Object.values(videoMap);
-
-  // Hanya tampilkan video yang punya data di rentang dateFrom-dateTo
-  videos = videos.filter(v => v.rows.some(r => r.tanggal >= dateFrom && r.tanggal <= dateTo));
 
   // Filter search
   if (search) {
     videos = videos.filter(v =>
-      v.video_id.toLowerCase().includes(search) ||
-      v.video_title.toLowerCase().includes(search) ||
-      v.tiktok_account.toLowerCase().includes(search)
+      (v.video_id || '').toLowerCase().includes(search) ||
+      (v.video_title || '').toLowerCase().includes(search) ||
+      (v.tiktok_account || '').toLowerCase().includes(search)
     );
   }
 
   // Filter ROAS status (berdasarkan hari terakhir di rentang)
   if (roasFilter) {
     videos = videos.filter(v => {
-      const inRange = v.rows.filter(r => r.tanggal >= dateFrom && r.tanggal <= dateTo);
+      const days = v.day_data || {};
+      const inRange = Object.keys(days).filter(d => d >= dateFrom && d <= dateTo).sort();
       if (!inRange.length) return false;
-      const latest = inRange[inRange.length - 1];
+      const latest = days[inRange[inRange.length - 1]];
       const roas = latest.cost > 0 ? latest.gross_revenue / latest.cost : 0;
       const thr = prodThresholds[v.product_id] || { high: 3, mid: 1.5 };
-      if (roasFilter === 'bagus') return roas >= thr.high;
+      if (roasFilter === 'bagus')   return roas >= thr.high;
       if (roasFilter === 'monitor') return roas >= thr.mid && roas < thr.high;
-      if (roasFilter === 'boncos') return latest.cost > 0 && roas < thr.mid;
+      if (roasFilter === 'boncos')  return latest.cost > 0 && roas < thr.mid;
       return true;
     });
   }
@@ -189,9 +176,10 @@ function processAndRender() {
   // Sort by avg ROAS tertinggi
   videos.sort((a, b) => {
     const avg = v => {
-      const rows = v.rows.filter(r => r.tanggal >= dateFrom && r.tanggal <= dateTo);
-      const tc = rows.reduce((s, r) => s + (r.cost || 0), 0);
-      const tr = rows.reduce((s, r) => s + (r.gross_revenue || 0), 0);
+      const days = v.day_data || {};
+      const inRange = Object.keys(days).filter(d => d >= dateFrom && d <= dateTo);
+      const tc = inRange.reduce((s, d) => s + (days[d].cost || 0), 0);
+      const tr = inRange.reduce((s, d) => s + (days[d].gross_revenue || 0), 0);
       return tc > 0 ? tr / tc : 0;
     };
     return avg(b) - avg(a);
@@ -210,9 +198,10 @@ function renderSummaryStats(videos, dateFrom, dateTo) {
 
   let totalCost = 0, totalRev = 0, videoAktif = 0;
   videos.forEach(v => {
-    const inRange = v.rows.filter(r => r.tanggal >= dateFrom && r.tanggal <= dateTo);
-    const cost = inRange.reduce((s, r) => s + (r.cost || 0), 0);
-    const rev  = inRange.reduce((s, r) => s + (r.gross_revenue || 0), 0);
+    const days = v.day_data || {};
+    const inRange = Object.keys(days).filter(d => d >= dateFrom && d <= dateTo);
+    const cost = inRange.reduce((s, d) => s + (days[d].cost || 0), 0);
+    const rev  = inRange.reduce((s, d) => s + (days[d].gross_revenue || 0), 0);
     if (cost > 0) videoAktif++;
     totalCost += cost;
     totalRev  += rev;
@@ -311,22 +300,18 @@ function renderVideoCards(videos, dateFrom, dateTo) {
           </thead>
           <tbody>
             ${videos.map(v => {
-              const inRange = v.rows.filter(r => r.tanggal >= dateFrom && r.tanggal <= dateTo);
+              const dayData = v.day_data || {};
               const thr = prodThresholds[v.product_id] || { high: 3, mid: 1.5 };
-              const prod = userProducts.find(p => p.id === v.product_id);
-              const prodName = prod ? prod.nama_produk : (v.product_id_raw || '—');
+              const prodName = v.product_name || '—';
 
-              const totalCost   = inRange.reduce((s, r) => s + (r.cost || 0), 0);
-              const totalRev    = inRange.reduce((s, r) => s + (r.gross_revenue || 0), 0);
-              const totalOrders = inRange.reduce((s, r) => s + (r.orders || 0), 0);
+              const inRangeDates = Object.keys(dayData).filter(d => d >= dateFrom && d <= dateTo);
+              const totalCost   = inRangeDates.reduce((s, d) => s + (dayData[d].cost || 0), 0);
+              const totalRev    = inRangeDates.reduce((s, d) => s + (dayData[d].gross_revenue || 0), 0);
+              const totalOrders = inRangeDates.reduce((s, d) => s + (dayData[d].orders || 0), 0);
               const avgRoas     = totalCost > 0 ? totalRev / totalCost : 0;
 
-              // Lookup cepat per tanggal (termasuk extra day untuk delta)
-              const byDate = {};
-              v.rows.forEach(r => { byDate[r.tanggal] = r; });
-
               const dateCols = dates.map(d => {
-                const row = byDate[d];
+                const row = dayData[d];
                 if (!row || row.cost <= 0) return `<td style="text-align:center;color:#cbd5e1;font-size:12px">-</td>`;
 
                 const roas = row.gross_revenue / row.cost;
@@ -334,7 +319,7 @@ function renderVideoCards(videos, dateFrom, dateTo) {
                 // Delta ROAS vs hari sebelumnya
                 const prevD = new Date(d + 'T00:00:00');
                 prevD.setDate(prevD.getDate() - 1);
-                const prevRow = byDate[toDateStr(prevD)];
+                const prevRow = dayData[toDateStr(prevD)];
                 let deltaHTML = '';
                 if (prevRow && prevRow.cost > 0) {
                   const delta = roas - (prevRow.gross_revenue / prevRow.cost);
