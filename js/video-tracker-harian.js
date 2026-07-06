@@ -191,121 +191,112 @@ function renderVideoCards(videos, dateFrom, dateTo) {
     return;
   }
 
-  el.innerHTML = videos.map(v => {
-    const inRange = v.rows.filter(r => r.tanggal >= dateFrom && r.tanggal <= dateTo);
-    const rowsDesc = [...inRange].sort((a, b) => b.tanggal.localeCompare(a.tanggal));
-    const thr = prodThresholds[v.product_id] || { high: 3, mid: 1.5 };
-    const prod = userProducts.find(p => p.id === v.product_id);
-    const prodName = prod ? prod.nama_produk : (v.product_id_raw || '—');
+  // Kumpulkan semua tanggal dalam rentang
+  const dates = [];
+  let cur = new Date(dateFrom + 'T00:00:00');
+  const endDate = new Date(dateTo + 'T00:00:00');
+  while (cur <= endDate) {
+    dates.push(toDateStr(cur));
+    cur.setDate(cur.getDate() + 1);
+  }
 
-    const totalCost = inRange.reduce((s, r) => s + (r.cost || 0), 0);
-    const totalRev = inRange.reduce((s, r) => s + (r.gross_revenue || 0), 0);
-    const totalOrders = inRange.reduce((s, r) => s + (r.orders || 0), 0);
-    const avgRoas = totalCost > 0 ? totalRev / totalCost : 0;
+  // Sticky column layout (sama dengan video tracker bulanan)
+  const S = [
+    { l: 0,   w: 220 },  // 0: Video
+    { l: 220, w: 150 },  // 1: Produk
+    { l: 370, w: 105 },  // 2: Total Cost
+    { l: 475, w: 115 },  // 3: Total Revenue
+    { l: 590, w: 85  },  // 4: ROAS
+    { l: 675, w: 75  },  // 5: Orders  ← last pinned
+  ];
+  const DIVIDER = 'box-shadow:2px 0 8px rgba(0,0,0,0.08);border-right:1px solid #e2e8f0;';
+  const sH = i => `position:sticky;left:${S[i].l}px;width:${S[i].w}px;min-width:${S[i].w}px;background:#f8f9fe;z-index:4;${i===5?DIVIDER:''}`;
+  const sD = (i, bg='#fff') => `position:sticky;left:${S[i].l}px;width:${S[i].w}px;min-width:${S[i].w}px;background:${bg};z-index:2;${i===5?DIVIDER:''}`;
 
-    const tableRows = rowsDesc.map(row => {
-      const roas = row.cost > 0 ? row.gross_revenue / row.cost : 0;
+  const fmtDateCol = d => {
+    const dt = new Date(d + 'T00:00:00');
+    return `${dt.getDate()}<br><span style="font-weight:400;font-size:10px;color:#94a3b8">${dt.toLocaleDateString('id-ID',{month:'short'})}</span>`;
+  };
 
-      // Cari data hari sebelumnya untuk delta
-      const pd = new Date(row.tanggal + 'T00:00:00');
-      pd.setDate(pd.getDate() - 1);
-      const prevDateStr = toDateStr(pd);
-      const prevRow = v.rows.find(r => r.tanggal === prevDateStr);
-
-      let deltaHTML = '<span style="color:#cbd5e1">—</span>';
-      if (prevRow) {
-        const prevRoas = prevRow.cost > 0 ? prevRow.gross_revenue / prevRow.cost : 0;
-        const roasDelta = roas - prevRoas;
-        const costDelta = prevRow.cost > 0 ? (row.cost - prevRow.cost) / prevRow.cost * 100 : null;
-        const revDelta = prevRow.gross_revenue > 0 ? (row.gross_revenue - prevRow.gross_revenue) / prevRow.gross_revenue * 100 : null;
-
-        const parts = [];
-        if (costDelta !== null) {
-          // Cost naik = merah (boncos lebih besar), cost turun = hijau (hemat)
-          const col = costDelta > 0 ? '#ef4444' : '#10b981';
-          parts.push(`<span style="color:${col}">Cost ${costDelta > 0 ? '↑' : '↓'}${Math.abs(costDelta).toFixed(0)}%</span>`);
-        }
-        if (revDelta !== null) {
-          const col = revDelta > 0 ? '#10b981' : '#ef4444';
-          parts.push(`<span style="color:${col}">Rev ${revDelta > 0 ? '↑' : '↓'}${Math.abs(revDelta).toFixed(0)}%</span>`);
-        }
-        const roasCol = roasDelta >= 0 ? '#10b981' : '#ef4444';
-        parts.push(`<span style="color:${roasCol};font-weight:600">ROAS ${roasDelta >= 0 ? '↑' : '↓'}${Math.abs(roasDelta).toFixed(2)}</span>`);
-        deltaHTML = `<div style="font-size:11px;display:flex;gap:6px;flex-wrap:wrap">${parts.join('')}</div>`;
-      }
-
-      let statusBadge = '';
-      if (row.cost > 0) {
-        if (roas >= thr.high) statusBadge = '<span class="badge badge-green">Bagus</span>';
-        else if (roas >= thr.mid) statusBadge = '<span class="badge badge-orange">Monitor</span>';
-        else statusBadge = '<span class="badge badge-red">Boncos</span>';
-      }
-
-      return `<tr>
-        <td style="white-space:nowrap;font-weight:500">${formatDate(row.tanggal)}</td>
-        <td class="text-right num">${fmtRp(row.cost)}</td>
-        <td class="text-right num">${fmtRp(row.gross_revenue)}</td>
-        <td class="text-right"><span class="${roasClass(roas, thr.high, thr.mid)} num">${roas > 0 ? roas.toFixed(2) + 'x' : '-'}</span></td>
-        <td class="text-right">${fmtNum(row.orders)}</td>
-        <td>${deltaHTML}</td>
-        <td>${statusBadge}</td>
-      </tr>`;
-    }).join('');
-
-    return `
-    <div class="card" style="margin-bottom:14px;padding:0;overflow:hidden">
-      <!-- Header Video -->
-      <div style="padding:14px 16px;border-bottom:1px solid #f1f5f9;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
-        <div style="min-width:0">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
-            <span onclick="copyText('${v.video_id}', this)" title="Copy Video ID"
-              style="font-weight:700;font-size:13px;font-family:monospace;cursor:pointer;color:var(--primary);user-select:none">${v.video_id}</span>
-            <span class="badge badge-purple">${prodName}</span>
-          </div>
-          ${v.video_title !== v.video_id && v.video_title
-            ? `<div style="font-size:13px;color:#334155;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:380px" title="${v.video_title}">${v.video_title}</div>`
-            : ''}
-          ${v.tiktok_account ? `<div style="font-size:12px;color:#94a3b8">${v.tiktok_account}</div>` : ''}
-        </div>
-        <!-- Ringkasan periode -->
-        <div style="display:flex;gap:20px;flex-wrap:wrap;flex-shrink:0">
-          <div style="text-align:right">
-            <div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Total Cost</div>
-            <div style="font-size:14px;font-weight:700">${fmtRp(totalCost)}</div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Total Revenue</div>
-            <div style="font-size:14px;font-weight:700">${fmtRp(totalRev)}</div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Avg ROAS</div>
-            <div class="${roasClass(avgRoas, thr.high, thr.mid)}" style="font-size:18px;font-weight:700">${avgRoas > 0 ? avgRoas.toFixed(2) + 'x' : '-'}</div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Total Orders</div>
-            <div style="font-size:14px;font-weight:700">${fmtNum(totalOrders)}</div>
-          </div>
-        </div>
-      </div>
-      <!-- Tabel harian -->
+  el.innerHTML = `
+    <div class="card" style="padding:0">
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Tanggal</th>
-              <th class="text-right">Cost</th>
-              <th class="text-right">Revenue</th>
-              <th class="text-right">ROAS</th>
-              <th class="text-right">Orders</th>
-              <th>vs Kemarin</th>
-              <th>Status</th>
+              <th style="${sH(0)}">Video</th>
+              <th style="${sH(1)}">Produk</th>
+              <th style="${sH(2)}">Total Cost</th>
+              <th style="${sH(3)}">Total Revenue</th>
+              <th style="${sH(4)}">ROAS</th>
+              <th style="${sH(5)}">Orders</th>
+              ${dates.map(d => `<th style="min-width:82px;text-align:center;font-weight:600">${fmtDateCol(d)}<div style="font-size:9px;font-weight:400;color:#94a3b8;margin-top:2px">Cost · Rev · ROAS</div></th>`).join('')}
             </tr>
           </thead>
-          <tbody>${tableRows}</tbody>
+          <tbody>
+            ${videos.map(v => {
+              const inRange = v.rows.filter(r => r.tanggal >= dateFrom && r.tanggal <= dateTo);
+              const thr = prodThresholds[v.product_id] || { high: 3, mid: 1.5 };
+              const prod = userProducts.find(p => p.id === v.product_id);
+              const prodName = prod ? prod.nama_produk : (v.product_id_raw || '—');
+
+              const totalCost   = inRange.reduce((s, r) => s + (r.cost || 0), 0);
+              const totalRev    = inRange.reduce((s, r) => s + (r.gross_revenue || 0), 0);
+              const totalOrders = inRange.reduce((s, r) => s + (r.orders || 0), 0);
+              const avgRoas     = totalCost > 0 ? totalRev / totalCost : 0;
+
+              // Lookup cepat per tanggal (termasuk extra day untuk delta)
+              const byDate = {};
+              v.rows.forEach(r => { byDate[r.tanggal] = r; });
+
+              const dateCols = dates.map(d => {
+                const row = byDate[d];
+                if (!row || row.cost <= 0) return `<td style="text-align:center;color:#cbd5e1;font-size:12px">-</td>`;
+
+                const roas = row.gross_revenue / row.cost;
+
+                // Delta ROAS vs hari sebelumnya
+                const prevD = new Date(d + 'T00:00:00');
+                prevD.setDate(prevD.getDate() - 1);
+                const prevRow = byDate[toDateStr(prevD)];
+                let deltaHTML = '';
+                if (prevRow && prevRow.cost > 0) {
+                  const delta = roas - (prevRow.gross_revenue / prevRow.cost);
+                  const col = delta >= 0 ? '#10b981' : '#ef4444';
+                  deltaHTML = `<div style="font-size:10px;color:${col};margin-top:2px">${delta >= 0 ? '↑' : '↓'}${Math.abs(delta).toFixed(1)}</div>`;
+                }
+
+                return `<td style="text-align:center;padding:5px 6px;vertical-align:middle">
+                  <div class="${roasClass(roas, thr.high, thr.mid)} num" style="font-size:12px;font-weight:700">${roas.toFixed(1)}x</div>
+                  <div style="font-size:10px;color:#64748b;margin-top:1px">${fmtRp(row.cost)}</div>
+                  <div style="font-size:10px;color:#10b981">${fmtRp(row.gross_revenue)}</div>
+                  ${deltaHTML}
+                </td>`;
+              }).join('');
+
+              return `<tr style="border-top:1px solid #f1f5f9">
+                <td class="td-video" style="${sD(0)}">
+                  <div class="vtitle">${v.video_title && v.video_title !== v.video_id ? v.video_title.slice(0,40) : 'ID: '+v.video_id.slice(-10)}</div>
+                  ${v.tiktok_account ? `<div class="vaccount">${v.tiktok_account}</div>` : ''}
+                  <div style="display:flex;align-items:center;gap:4px;margin-top:3px">
+                    <span style="font-size:10px;color:#64748b;font-family:monospace">${v.video_id}</span>
+                    <button onclick="copyText('${v.video_id}', this)" title="Copy Video ID" style="background:none;border:none;cursor:pointer;padding:0;color:#94a3b8;line-height:1;flex-shrink:0">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    </button>
+                  </div>
+                </td>
+                <td style="${sD(1)}"><span class="badge badge-purple" style="font-size:10px">${prodName}</span></td>
+                <td class="num" style="${sD(2)}">${fmtRp(totalCost)}</td>
+                <td class="num" style="${sD(3)}">${fmtRp(totalRev)}</td>
+                <td style="${sD(4)}"><span class="${roasClass(avgRoas, thr.high, thr.mid)} num fw-700">${avgRoas > 0 ? avgRoas.toFixed(2)+'x' : '-'}</span></td>
+                <td style="${sD(5)}">${fmtNum(totalOrders)}</td>
+                ${dateCols}
+              </tr>`;
+            }).join('')}
+          </tbody>
         </table>
       </div>
     </div>`;
-  }).join('');
 }
 
 function renderHarianPagination(total) {
