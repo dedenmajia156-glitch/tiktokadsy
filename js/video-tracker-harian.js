@@ -198,9 +198,57 @@ function processAndRender() {
   });
 
   filteredVideos = videos;
+  renderSummaryStats(videos, dateFrom, dateTo);
   const pageVids = videos.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
   renderVideoCards(pageVids, dateFrom, dateTo);
   renderHarianPagination(videos.length);
+}
+
+function renderSummaryStats(videos, dateFrom, dateTo) {
+  const el = document.getElementById('harian-stats');
+  if (!videos.length) { el.style.display = 'none'; return; }
+
+  let totalCost = 0, totalRev = 0, videoAktif = 0;
+  videos.forEach(v => {
+    const inRange = v.rows.filter(r => r.tanggal >= dateFrom && r.tanggal <= dateTo);
+    const cost = inRange.reduce((s, r) => s + (r.cost || 0), 0);
+    const rev  = inRange.reduce((s, r) => s + (r.gross_revenue || 0), 0);
+    if (cost > 0) videoAktif++;
+    totalCost += cost;
+    totalRev  += rev;
+  });
+  const avgRoas = totalCost > 0 ? totalRev / totalCost : 0;
+
+  el.style.display = 'grid';
+  el.innerHTML = `
+    <div class="stat-card pink">
+      <div class="stat-icon pink">💳</div>
+      <div class="stat-info">
+        <div class="value">${fmtRp(totalCost)}</div>
+        <div class="label">Total Ads Spend</div>
+      </div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-icon green">$</div>
+      <div class="stat-info">
+        <div class="value">${fmtRp(totalRev)}</div>
+        <div class="label">Total Revenue</div>
+      </div>
+    </div>
+    <div class="stat-card orange">
+      <div class="stat-icon orange">📈</div>
+      <div class="stat-info">
+        <div class="value">${avgRoas > 0 ? avgRoas.toFixed(2) + 'x' : '-'}</div>
+        <div class="label">ROAS Rata-rata</div>
+      </div>
+    </div>
+    <div class="stat-card purple">
+      <div class="stat-icon purple">🎬</div>
+      <div class="stat-info">
+        <div class="value">${videoAktif}</div>
+        <div class="label">Video Aktif</div>
+      </div>
+    </div>`;
 }
 
 function formatDate(dateStr) {
