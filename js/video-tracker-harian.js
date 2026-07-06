@@ -6,6 +6,7 @@ let filteredVideos = [];
 let parsedRows = [];
 let currentPage = 0;
 const PAGE_SIZE = 15;
+let _loadToken = 0; // cancel stale background loads
 
 const VTH_CACHE_TTL = 5 * 60 * 1000; // 5 menit
 function vthGetCache(key) {
@@ -89,6 +90,7 @@ function setupFilters() {
 }
 
 async function loadData() {
+  const myToken = ++_loadToken;
   const uid = await getTargetUid();
   const produkId = document.getElementById('fil-produk').value;
   const dateFrom = document.getElementById('fil-date-from').value;
@@ -111,21 +113,24 @@ async function loadData() {
 
   document.getElementById('video-list').innerHTML = '<div class="loader"><div class="spinner"></div></div>';
   document.getElementById('harian-pagination').style.display = 'none';
+  document.getElementById('harian-stats').style.display = 'none';
 
-  try {
+  const BATCH = 1000;
+  const videoMap = {};
+
+  function buildQuery(rangeFrom) {
     let q = db().from('ads_data_harian')
       .select('video_id, video_title, tiktok_account, product_id, tanggal, cost, gross_revenue, orders')
       .gte('tanggal', extraDate)
       .lte('tanggal', dateTo)
       .order('tanggal', { ascending: true });
-
     if (profile?.role !== 'admin' || window.__activeAdvertiser) q = q.eq('user_id', uid);
     if (produkId) q = q.eq('product_id', produkId);
+    return q.range(rangeFrom, rangeFrom + BATCH - 1);
+  }
 
-    const rawRows = await fetchAllRows(q);
-
-    const videoMap = {};
-    rawRows.forEach(row => {
+  function mergeRows(rows) {
+    rows.forEach(row => {
       const vid = row.video_id || 'unknown';
       if (!videoMap[vid]) {
         videoMap[vid] = {
@@ -143,14 +148,68 @@ async function loadData() {
       videoMap[vid].day_data[d].gross_revenue += Number(row.gross_revenue) || 0;
       videoMap[vid].day_data[d].orders        += Number(row.orders) || 0;
     });
+  }
 
+  try {
+    // === Batch pertama: langsung render ===
+    const { data: firstRows, error: firstErr } = await buildQuery(0);
+    if (_loadToken !== myToken) return;
+    if (firstErr) throw firstErr;
+
+    mergeRows(firstRows || []);
     allData = Object.values(videoMap);
-    vthSetCache(ckey, allData);
     currentPage = 0;
     processAndRender();
+
+    // === Sisa data: load di background ===
+    if ((firstRows?.length || 0) >= BATCH) {
+      setLoadingMoreBanner(true);
+      let offset = BATCH;
+
+      while (true) {
+        const { data: moreRows, error: moreErr } = await buildQuery(offset);
+        if (_loadToken !== myToken) return;
+        if (moreErr || !moreRows?.length) break;
+
+        mergeRows(moreRows);
+        allData = Object.values(videoMap);
+        // Update stats + pagination tanpa geser halaman
+        const df = document.getElementById('fil-date-from').value;
+        const dt = document.getElementById('fil-date-to').value;
+        renderSummaryStats(filteredVideos.length ? filteredVideos : allData, df, dt);
+        renderHarianPagination(filteredVideos.length || allData.length);
+
+        if (moreRows.length < BATCH) break;
+        offset += BATCH;
+      }
+
+      setLoadingMoreBanner(false);
+      // Re-render penuh setelah semua data masuk
+      processAndRender();
+    }
+
+    vthSetCache(ckey, allData);
   } catch(e) {
+    if (_loadToken !== myToken) return;
     showToast('Gagal load data: ' + e.message, 'error');
     document.getElementById('video-list').innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><h3>Gagal memuat data</h3><p>' + e.message + '</p></div>';
+  }
+}
+
+function setLoadingMoreBanner(show) {
+  let el = document.getElementById('vth-loading-more');
+  if (show) {
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'vth-loading-more';
+      el.style.cssText = 'font-size:12px;color:#64748b;text-align:center;padding:6px 12px;background:#f8fafc;border-radius:8px;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px';
+      el.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px"></div> Memuat sisa data...';
+      const pg = document.getElementById('harian-pagination');
+      pg.parentNode.insertBefore(el, pg);
+    }
+    el.style.display = 'flex';
+  } else if (el) {
+    el.remove();
   }
 }
 
