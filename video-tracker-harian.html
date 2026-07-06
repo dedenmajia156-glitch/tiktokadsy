@@ -23,14 +23,11 @@
     <div id="topbar-container"></div>
     <div class="page-content">
 
-      <div class="page-header" style="align-items:flex-start;gap:16px">
-        <div id="harian-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;flex:1">
-          <div class="stat-card pink"><div class="stat-icon pink">💳</div><div class="stat-info"><div class="value" style="color:#cbd5e1">—</div><div class="label">Total Ads Spend</div></div></div>
-          <div class="stat-card green"><div class="stat-icon green">$</div><div class="stat-info"><div class="value" style="color:#cbd5e1">—</div><div class="label">Total Revenue</div></div></div>
-          <div class="stat-card orange"><div class="stat-icon orange">📈</div><div class="stat-info"><div class="value" style="color:#cbd5e1">—</div><div class="label">ROAS Rata-rata</div></div></div>
-          <div class="stat-card purple"><div class="stat-icon purple">🎬</div><div class="stat-info"><div class="value" style="color:#cbd5e1">—</div><div class="label">Video Aktif</div></div></div>
-        </div>
-        <button class="btn btn-primary-sm" onclick="openUploadModal()" style="flex-shrink:0;margin-top:6px">📤 Upload Harian</button>
+      <div id="harian-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px">
+        <div class="stat-card pink"><div class="stat-icon pink">💳</div><div class="stat-info"><div class="value" style="color:#cbd5e1">—</div><div class="label">Total Ads Spend</div></div></div>
+        <div class="stat-card green"><div class="stat-icon green">$</div><div class="stat-info"><div class="value" style="color:#cbd5e1">—</div><div class="label">Total Revenue</div></div></div>
+        <div class="stat-card orange"><div class="stat-icon orange">📈</div><div class="stat-info"><div class="value" style="color:#cbd5e1">—</div><div class="label">ROAS Rata-rata</div></div></div>
+        <div class="stat-card purple"><div class="stat-icon purple">🎬</div><div class="stat-info"><div class="value" style="color:#cbd5e1">—</div><div class="label">Video Aktif</div></div></div>
       </div>
 
       <!-- Filter -->
@@ -38,9 +35,9 @@
         <label>Produk:</label>
         <select id="fil-produk"><option value="">Semua Produk</option></select>
         <label>Dari:</label>
-        <input type="date" id="fil-date-from" style="width:140px">
+        <input type="date" id="fil-date-from">
         <label>Sampai:</label>
-        <input type="date" id="fil-date-to" style="width:140px">
+        <input type="date" id="fil-date-to">
         <button class="btn btn-primary-sm" id="btn-load">Tampilkan</button>
         <label>Status:</label>
         <select id="fil-roas-status">
@@ -50,6 +47,7 @@
           <option value="boncos">Boncos</option>
         </select>
         <input type="text" id="fil-search" placeholder="🔍 Cari video / akun..." style="width:190px">
+        <button class="btn btn-primary-sm" onclick="openUploadModal()" style="margin-left:auto">📤 Upload</button>
       </div>
 
       <div id="video-list">
