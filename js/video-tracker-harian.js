@@ -26,6 +26,7 @@ function clearVthCache() {
 
 
 (async () => {
+  clearVthCache(); // bersihkan cache lama saat init
   profile = await initPage('tracker-harian', 'Video Tracker Harian');
   await loadProducts();
   setupFilters();
@@ -99,7 +100,7 @@ async function loadData() {
   prev.setDate(prev.getDate() - 1);
   const extraDate = toDateStr(prev);
 
-  const ckey = `gmv_vth5_${uid}_${extraDate}_${dateTo}_${produkId || 'all'}`;
+  const ckey = `gmv_vth6_${uid}_${extraDate}_${dateTo}_${produkId || 'all'}`;
   const cached = vthGetCache(ckey);
   if (cached) {
     allData = cached;
