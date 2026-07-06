@@ -151,18 +151,39 @@ async function loadData() {
   }
 
   try {
-    // === Batch pertama: langsung render ===
-    const { data: firstRows, error: firstErr } = await buildQuery(0);
-    if (_loadToken !== myToken) return;
-    if (firstErr) throw firstErr;
+    // === Stats query (kolom minimal) + batch pertama tabel — paralel ===
+    let aggQ = db().from('ads_data_harian')
+      .select('cost, gross_revenue, video_id')
+      .gte('tanggal', dateFrom).lte('tanggal', dateTo);
+    if (profile?.role !== 'admin' || window.__activeAdvertiser) aggQ = aggQ.eq('user_id', uid);
+    if (produkId) aggQ = aggQ.eq('product_id', produkId);
 
-    mergeRows(firstRows || []);
+    const [aggRows, firstRes] = await Promise.all([
+      fetchAllRows(aggQ),
+      buildQuery(0)
+    ]);
+    if (_loadToken !== myToken) return;
+    if (firstRes.error) throw firstRes.error;
+
+    // Hitung & tampilkan stats sekarang (data sudah lengkap dari aggQ)
+    let totalCost = 0, totalRev = 0, videoSet = new Set();
+    aggRows.forEach(r => {
+      totalCost += Number(r.cost) || 0;
+      totalRev  += Number(r.gross_revenue) || 0;
+      if (r.video_id && (Number(r.cost) || 0) > 0) videoSet.add(r.video_id);
+    });
+    const avgRoas = totalCost > 0 ? totalRev / totalCost : 0;
+    renderStatCards(totalCost, totalRev, avgRoas, videoSet.size);
+
+    // Render tabel dari batch pertama
+    const firstRows = firstRes.data || [];
+    mergeRows(firstRows);
     allData = Object.values(videoMap);
     currentPage = 0;
-    processAndRender();
+    renderTableOnly(dateFrom, dateTo);
 
-    // === Sisa data: load di background ===
-    if ((firstRows?.length || 0) >= BATCH) {
+    // === Sisa data: load di background (tabel saja, stats sudah fix) ===
+    if (firstRows.length >= BATCH) {
       setLoadingMoreBanner(true);
       let offset = BATCH;
 
@@ -173,19 +194,13 @@ async function loadData() {
 
         mergeRows(moreRows);
         allData = Object.values(videoMap);
-        // Update stats + pagination tanpa geser halaman
-        const df = document.getElementById('fil-date-from').value;
-        const dt = document.getElementById('fil-date-to').value;
-        renderSummaryStats(filteredVideos.length ? filteredVideos : allData, df, dt);
-        renderHarianPagination(filteredVideos.length || allData.length);
 
         if (moreRows.length < BATCH) break;
         offset += BATCH;
       }
 
       setLoadingMoreBanner(false);
-      // Re-render penuh setelah semua data masuk
-      processAndRender();
+      renderTableOnly(dateFrom, dateTo);
     }
 
     vthSetCache(ckey, allData);
@@ -211,6 +226,69 @@ function setLoadingMoreBanner(show) {
   } else if (el) {
     el.remove();
   }
+}
+
+function renderStatCards(totalCost, totalRev, avgRoas, videoAktif) {
+  const el = document.getElementById('harian-stats');
+  el.style.display = 'grid';
+  el.innerHTML = `
+    <div class="stat-card pink">
+      <div class="stat-icon pink">💳</div>
+      <div class="stat-info"><div class="value">${fmtRp(totalCost)}</div><div class="label">Total Ads Spend</div></div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-icon green">$</div>
+      <div class="stat-info"><div class="value">${fmtRp(totalRev)}</div><div class="label">Total Revenue</div></div>
+    </div>
+    <div class="stat-card orange">
+      <div class="stat-icon orange">📈</div>
+      <div class="stat-info"><div class="value">${avgRoas > 0 ? avgRoas.toFixed(2) + 'x' : '-'}</div><div class="label">ROAS Rata-rata</div></div>
+    </div>
+    <div class="stat-card purple">
+      <div class="stat-icon purple">🎬</div>
+      <div class="stat-info"><div class="value">${videoAktif}</div><div class="label">Video Aktif</div></div>
+    </div>`;
+}
+
+function renderTableOnly(dateFrom, dateTo) {
+  const search = document.getElementById('fil-search').value.trim().toLowerCase();
+  const roasFilter = document.getElementById('fil-roas-status').value;
+
+  let videos = allData.filter(v => Object.keys(v.day_data || {}).some(d => d >= dateFrom && d <= dateTo));
+  if (search) {
+    videos = videos.filter(v =>
+      (v.video_id || '').toLowerCase().includes(search) ||
+      (v.video_title || '').toLowerCase().includes(search) ||
+      (v.tiktok_account || '').toLowerCase().includes(search)
+    );
+  }
+  if (roasFilter) {
+    videos = videos.filter(v => {
+      const days = v.day_data || {};
+      const inRange = Object.keys(days).filter(d => d >= dateFrom && d <= dateTo).sort();
+      if (!inRange.length) return false;
+      const latest = days[inRange[inRange.length - 1]];
+      const roas = (Number(latest.cost) || 0) > 0 ? (Number(latest.gross_revenue) || 0) / (Number(latest.cost) || 0) : 0;
+      const thr = prodThresholds[v.product_id] || { high: 3, mid: 1.5 };
+      if (roasFilter === 'bagus')   return roas >= thr.high;
+      if (roasFilter === 'monitor') return roas >= thr.mid && roas < thr.high;
+      if (roasFilter === 'boncos')  return (Number(latest.cost) || 0) > 0 && roas < thr.mid;
+      return true;
+    });
+  }
+  videos.sort((a, b) => {
+    const avg = v => {
+      const days = v.day_data || {};
+      const inRange = Object.keys(days).filter(d => d >= dateFrom && d <= dateTo);
+      const tc = inRange.reduce((s, d) => s + (Number(days[d].cost) || 0), 0);
+      const tr = inRange.reduce((s, d) => s + (Number(days[d].gross_revenue) || 0), 0);
+      return tc > 0 ? tr / tc : 0;
+    };
+    return avg(b) - avg(a);
+  });
+  filteredVideos = videos;
+  renderVideoCards(videos.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE), dateFrom, dateTo);
+  renderHarianPagination(videos.length);
 }
 
 function processAndRender() {
