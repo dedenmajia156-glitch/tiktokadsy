@@ -34,11 +34,6 @@
       <div class="filter-bar">
         <label>Produk:</label>
         <select id="fil-produk"><option value="">Semua Produk</option></select>
-        <label>Dari:</label>
-        <input type="date" id="fil-date-from">
-        <label>Sampai:</label>
-        <input type="date" id="fil-date-to">
-        <button class="btn btn-primary-sm" id="btn-load">Tampilkan</button>
         <label>Status:</label>
         <select id="fil-roas-status">
           <option value="">Semua</option>
@@ -46,8 +41,19 @@
           <option value="monitor">Monitor</option>
           <option value="boncos">Boncos</option>
         </select>
+        <label>Sort:</label>
+        <select id="fil-sort">
+          <option value="roas_desc">ROAS Tertinggi</option>
+          <option value="revenue_desc">Revenue Tertinggi</option>
+          <option value="cost_desc">Spend Tertinggi</option>
+          <option value="roas_asc">ROAS Terendah</option>
+        </select>
+        <label>Dari:</label>
+        <input type="date" id="fil-date-from">
+        <label>Sampai:</label>
+        <input type="date" id="fil-date-to">
+        <button class="btn btn-primary-sm" id="btn-load">Tampilkan</button>
         <input type="text" id="fil-search" placeholder="🔍 Cari video / akun..." style="width:190px">
-        <button class="btn btn-primary-sm" onclick="openUploadModal()" style="margin-left:auto">📤 Upload</button>
       </div>
 
       <div id="video-list">
