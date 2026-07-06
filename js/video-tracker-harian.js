@@ -113,7 +113,6 @@ async function loadData() {
 
   document.getElementById('video-list').innerHTML = '<div class="loader"><div class="spinner"></div></div>';
   document.getElementById('harian-pagination').style.display = 'none';
-  document.getElementById('harian-stats').style.display = 'none';
 
   const BATCH = 1000;
   const videoMap = {};
@@ -231,7 +230,6 @@ function setLoadingMoreBanner(show) {
 
 function renderStatCards(totalCost, totalRev, avgRoas, videoAktif) {
   const el = document.getElementById('harian-stats');
-  el.style.display = 'grid';
   el.innerHTML = `
     <div class="stat-card pink">
       <div class="stat-icon pink">💳</div>
@@ -351,9 +349,6 @@ function processAndRender() {
 }
 
 function renderSummaryStats(videos, dateFrom, dateTo) {
-  const el = document.getElementById('harian-stats');
-  if (!videos.length) { el.style.display = 'none'; return; }
-
   let totalCost = 0, totalRev = 0, videoAktif = 0;
   videos.forEach(v => {
     const days = v.day_data || {};
@@ -365,8 +360,7 @@ function renderSummaryStats(videos, dateFrom, dateTo) {
     totalRev  += rev;
   });
   const avgRoas = totalCost > 0 ? totalRev / totalCost : 0;
-
-  el.style.display = 'grid';
+  const el = document.getElementById('harian-stats');
   el.innerHTML = `
     <div class="stat-card pink">
       <div class="stat-icon pink">💳</div>
