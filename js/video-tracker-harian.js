@@ -112,15 +112,38 @@ async function loadData() {
   document.getElementById('harian-pagination').style.display = 'none';
 
   try {
-    const { data: rpcData, error: rpcErr } = await db().rpc('get_video_tracker_harian', {
-      p_user_id:    (profile?.role !== 'admin' || window.__activeAdvertiser) ? uid : null,
-      p_product_id: produkId || null,
-      p_date_from:  extraDate,
-      p_date_to:    dateTo,
-    });
-    if (rpcErr) throw new Error(rpcErr.message);
+    let q = db().from('ads_data_harian')
+      .select('video_id, video_title, tiktok_account, product_id, tanggal, cost, gross_revenue, orders')
+      .gte('tanggal', extraDate)
+      .lte('tanggal', dateTo)
+      .order('tanggal', { ascending: true });
 
-    allData = rpcData || [];
+    if (profile?.role !== 'admin' || window.__activeAdvertiser) q = q.eq('user_id', uid);
+    if (produkId) q = q.eq('product_id', produkId);
+
+    const rawRows = await fetchAllRows(q);
+
+    const videoMap = {};
+    rawRows.forEach(row => {
+      const vid = row.video_id || 'unknown';
+      if (!videoMap[vid]) {
+        videoMap[vid] = {
+          video_id:       vid,
+          video_title:    row.video_title || '',
+          tiktok_account: row.tiktok_account || '',
+          product_id:     row.product_id,
+          product_name:   userProducts.find(p => p.id === row.product_id)?.nama_produk || '',
+          day_data:       {}
+        };
+      }
+      const d = row.tanggal;
+      if (!videoMap[vid].day_data[d]) videoMap[vid].day_data[d] = { cost: 0, gross_revenue: 0, orders: 0 };
+      videoMap[vid].day_data[d].cost          += Number(row.cost) || 0;
+      videoMap[vid].day_data[d].gross_revenue += Number(row.gross_revenue) || 0;
+      videoMap[vid].day_data[d].orders        += Number(row.orders) || 0;
+    });
+
+    allData = Object.values(videoMap);
     vthSetCache(ckey, allData);
     currentPage = 0;
     processAndRender();
