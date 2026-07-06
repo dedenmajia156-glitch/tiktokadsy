@@ -99,6 +99,7 @@ async function loadData() {
   prev.setDate(prev.getDate() - 1);
   const extraDate = toDateStr(prev);
 
+  clearVthCache(); // DEBUG: force fresh fetch
   const ckey = `gmv_vth3_${uid}_${extraDate}_${dateTo}_${produkId || 'all'}`;
   console.log('[VTH] ckey:', ckey);
   const cached = vthGetCache(ckey);
