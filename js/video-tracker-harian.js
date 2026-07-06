@@ -151,21 +151,29 @@ async function loadData() {
   }
 
   try {
-    // === Stats query (kolom minimal) + batch pertama tabel — paralel ===
+    // === Stats query + batch pertama: keduanya jalan, tapi ditangani terpisah ===
     let aggQ = db().from('ads_data_harian')
       .select('cost, gross_revenue, video_id')
       .gte('tanggal', dateFrom).lte('tanggal', dateTo);
     if (profile?.role !== 'admin' || window.__activeAdvertiser) aggQ = aggQ.eq('user_id', uid);
     if (produkId) aggQ = aggQ.eq('product_id', produkId);
 
-    const [aggRows, firstRes] = await Promise.all([
-      fetchAllRows(aggQ),
-      buildQuery(0)
-    ]);
+    // Fire keduanya sekaligus, tapi jangan tunggu aggQ
+    const aggPromise = fetchAllRows(aggQ);
+    const firstRes = await buildQuery(0);
     if (_loadToken !== myToken) return;
     if (firstRes.error) throw firstRes.error;
 
-    // Hitung & tampilkan stats sekarang (data sudah lengkap dari aggQ)
+    // Tabel langsung render dari batch pertama (tidak tunggu aggQ)
+    const firstRows = firstRes.data || [];
+    mergeRows(firstRows);
+    allData = Object.values(videoMap);
+    currentPage = 0;
+    renderTableOnly(dateFrom, dateTo);
+
+    // Stats: tunggu aggQ (mungkin sudah selesai duluan karena kolom lebih sedikit)
+    const aggRows = await aggPromise;
+    if (_loadToken !== myToken) return;
     let totalCost = 0, totalRev = 0, videoSet = new Set();
     aggRows.forEach(r => {
       totalCost += Number(r.cost) || 0;
@@ -174,13 +182,6 @@ async function loadData() {
     });
     const avgRoas = totalCost > 0 ? totalRev / totalCost : 0;
     renderStatCards(totalCost, totalRev, avgRoas, videoSet.size);
-
-    // Render tabel dari batch pertama
-    const firstRows = firstRes.data || [];
-    mergeRows(firstRows);
-    allData = Object.values(videoMap);
-    currentPage = 0;
-    renderTableOnly(dateFrom, dateTo);
 
     // === Sisa data: load di background (tabel saja, stats sudah fix) ===
     if (firstRows.length >= BATCH) {
