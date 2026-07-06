@@ -421,11 +421,11 @@ async function doUpload() {
   if (errMsg) { showErr(errEl, 'Gagal upload: ' + errMsg); return; }
 
   showToast(`${parsedRows.length} data berhasil diupload!`, 'success');
-  // Invalidate dashboard cache
-  Object.keys(sessionStorage).filter(k =>
+  // Invalidate semua cache GMV
+  Object.keys(localStorage).filter(k =>
     k.startsWith('gmv_dash_') || k.startsWith('gmv_chart_') ||
-    k.startsWith('gmv_vt_')   || k.startsWith('gmv_vth_')
-  ).forEach(k => sessionStorage.removeItem(k));
+    k.startsWith('gmv_vt_')   || k.startsWith('gmv_vth')
+  ).forEach(k => localStorage.removeItem(k));
   closeUpload();
 
   // Refresh filter bulan

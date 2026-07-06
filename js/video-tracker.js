@@ -6,21 +6,21 @@ let prodTiktokId = {};   // product_id → product_id_tiktok
 let allVideos = []; // semua video setelah filter, untuk pagination
 let vtPage = 0;
 
-const VT_CACHE_TTL = 5 * 60 * 1000; // 5 menit
+const VT_CACHE_TTL = 30 * 60 * 1000; // 30 menit
 function vtGetCache(key) {
   try {
-    const raw = sessionStorage.getItem(key);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
     const { ts, data } = JSON.parse(raw);
-    if (Date.now() - ts > VT_CACHE_TTL) { sessionStorage.removeItem(key); return null; }
+    if (Date.now() - ts > VT_CACHE_TTL) { localStorage.removeItem(key); return null; }
     return data;
   } catch(_) { return null; }
 }
 function vtSetCache(key, data) {
-  try { sessionStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch(_) {}
+  try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch(_) {}
 }
 function clearVtCache() {
-  Object.keys(sessionStorage).filter(k => k.startsWith('gmv_vt_')).forEach(k => sessionStorage.removeItem(k));
+  Object.keys(localStorage).filter(k => k.startsWith('gmv_vt_')).forEach(k => localStorage.removeItem(k));
 }
 
 (async () => {

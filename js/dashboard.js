@@ -3,7 +3,7 @@ let products = [];
 let prodThresholds = {};
 let chartRevenue = null;
 
-const CACHE_TTL = 5 * 60 * 1000; // 5 menit
+const CACHE_TTL = 30 * 60 * 1000; // 30 menit
 
 function cacheKey(uid, bulan, produkId) {
   return `gmv_dash_${uid}_${bulan || 'all'}_${produkId || 'all'}`;
@@ -11,20 +11,20 @@ function cacheKey(uid, bulan, produkId) {
 
 function getCache(key) {
   try {
-    const raw = sessionStorage.getItem(key);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
     const { ts, data } = JSON.parse(raw);
-    if (Date.now() - ts > CACHE_TTL) { sessionStorage.removeItem(key); return null; }
+    if (Date.now() - ts > CACHE_TTL) { localStorage.removeItem(key); return null; }
     return data;
   } catch(_) { return null; }
 }
 
 function setCache(key, data) {
-  try { sessionStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch(_) {}
+  try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch(_) {}
 }
 
 function clearDashCache() {
-  Object.keys(sessionStorage).filter(k => k.startsWith('gmv_dash_')).forEach(k => sessionStorage.removeItem(k));
+  Object.keys(localStorage).filter(k => k.startsWith('gmv_dash_') || k.startsWith('gmv_chart_')).forEach(k => localStorage.removeItem(k));
 }
 
 (async () => {

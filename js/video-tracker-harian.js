@@ -8,26 +8,25 @@ let currentPage = 0;
 const PAGE_SIZE = 15;
 let _loadToken = 0; // cancel stale background loads
 
-const VTH_CACHE_TTL = 5 * 60 * 1000; // 5 menit
+const VTH_CACHE_TTL = 30 * 60 * 1000; // 30 menit
 function vthGetCache(key) {
   try {
-    const raw = sessionStorage.getItem(key);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
     const { ts, data } = JSON.parse(raw);
-    if (Date.now() - ts > VTH_CACHE_TTL) { sessionStorage.removeItem(key); return null; }
+    if (Date.now() - ts > VTH_CACHE_TTL) { localStorage.removeItem(key); return null; }
     return data;
   } catch(_) { return null; }
 }
 function vthSetCache(key, data) {
-  try { sessionStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch(_) {}
+  try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch(_) {}
 }
 function clearVthCache() {
-  Object.keys(sessionStorage).filter(k => k.startsWith('gmv_vth')).forEach(k => sessionStorage.removeItem(k));
+  Object.keys(localStorage).filter(k => k.startsWith('gmv_vth')).forEach(k => localStorage.removeItem(k));
 }
 
 
 (async () => {
-  clearVthCache();
   profile = await initPage('tracker-harian', 'Video Tracker Harian');
   injectUploadBtn();
   await loadProducts();
