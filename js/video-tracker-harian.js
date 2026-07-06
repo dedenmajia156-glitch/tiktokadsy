@@ -121,6 +121,12 @@ async function loadData() {
       p_date_from:  extraDate,
       p_date_to:    dateTo,
     };
+    // Debug: cek data langsung dari tabel
+    const { data: directCheck } = await db().from('ads_data_harian')
+      .select('video_id, tanggal, cost, gross_revenue, orders')
+      .eq('user_id', uid).gt('cost', 0).limit(3);
+    console.log('[VTH] direct table check (cost>0):', directCheck);
+
     const { data: rpcData, error: rpcErr } = await db().rpc('get_video_tracker_harian', rpcParams);
     console.log('[VTH] rpcParams:', rpcParams);
     console.log('[VTH] rpcErr:', rpcErr);
