@@ -112,6 +112,35 @@
   </div>
 </div>
 
+<!-- Modal Keputusan -->
+<div class="modal-overlay" id="modal-decision-h">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-dec-h-title">Keputusan Video</div>
+      <button class="modal-close" onclick="closeDecisionModalH()">✕</button>
+    </div>
+    <div id="modal-dec-h-info" style="background:#f8f9ff;border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px"></div>
+    <div class="field">
+      <label>Keputusan</label>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-scale" id="dec-h-scale" onclick="setDecisionH('scale')">⬆ Scale</button>
+        <button class="btn btn-kill"  id="dec-h-kill"  onclick="setDecisionH('kill')">❌ Kill</button>
+        <button class="btn btn-monitor" id="dec-h-monitor" onclick="setDecisionH('monitor')">👁 Monitor</button>
+      </div>
+      <input type="hidden" id="dec-h-value" value="">
+    </div>
+    <div class="field">
+      <label>Catatan (opsional)</label>
+      <textarea id="dec-h-note" rows="3" placeholder="cth: ROAS bagus, scale budget 2x" style="resize:none"></textarea>
+    </div>
+    <div class="auth-err" id="dec-h-err"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeDecisionModalH()">Batal</button>
+      <button class="btn btn-primary-sm" onclick="saveDecisionH()">Simpan Keputusan</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast-container"></div>
 <script src="js/video-tracker-harian.js"></script>
 </body>
