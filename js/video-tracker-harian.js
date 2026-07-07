@@ -2,11 +2,13 @@ let profile = null;
 let userProducts = [];
 let prodThresholds = {};
 let allData = [];
+let decisionsMap = {}; // video_id → { keputusan, waktu_mulai }
 let filteredVideos = [];
 let parsedRows = [];
 let currentPage = 0;
 const PAGE_SIZE = 15;
 let _loadToken = 0; // cancel stale background loads
+let _modalVideoId = null;
 
 const VTH_CACHE_TTL = 30 * 60 * 1000; // 30 menit
 function vthGetCache(key) {
@@ -113,10 +115,11 @@ async function loadData() {
   prev.setDate(prev.getDate() - 1);
   const extraDate = toDateStr(prev);
 
-  const ckey = `gmv_vth6_${uid}_${extraDate}_${dateTo}_${produkId || 'all'}`;
+  const ckey = `gmv_vth7_${uid}_${extraDate}_${dateTo}_${produkId || 'all'}`;
   const cached = vthGetCache(ckey);
   if (cached) {
-    allData = cached;
+    allData = cached.data || cached; // backward compat
+    decisionsMap = cached.decisions || {};
     currentPage = 0;
     processAndRender();
     return;
@@ -161,17 +164,27 @@ async function loadData() {
   }
 
   try {
-    // Batch pertama → langsung render
-    const firstRes = await buildQuery(0);
+    // Decisions + batch pertama jalan paralel
+    const decPromise = db().from('video_decisions')
+      .select('video_id, keputusan, waktu_mulai')
+      .order('waktu_mulai', { ascending: false });
+
+    const [firstRes, decRes] = await Promise.all([buildQuery(0), decPromise]);
     if (_loadToken !== myToken) return;
     if (firstRes.error) throw firstRes.error;
+
+    // Build decisionsMap (latest keputusan per video_id)
+    decisionsMap = {};
+    (decRes.data || []).forEach(d => {
+      if (!decisionsMap[d.video_id]) decisionsMap[d.video_id] = d;
+    });
 
     mergeRows(firstRes.data || []);
     allData = Object.values(videoMap);
     currentPage = 0;
     processAndRender();
 
-    // Sisa data → background, stats update tiap batch
+    // Sisa data → background
     if ((firstRes.data?.length || 0) >= BATCH) {
       setLoadingMoreBanner(true);
       let offset = BATCH;
@@ -192,7 +205,7 @@ async function loadData() {
       setLoadingMoreBanner(false);
     }
 
-    vthSetCache(ckey, allData);
+    vthSetCache(ckey, { data: allData, decisions: decisionsMap });
     showToast(`${allData.length} video berhasil dimuat`, 'success');
   } catch(e) {
     if (_loadToken !== myToken) return;
@@ -435,6 +448,8 @@ function renderVideoCards(videos, dateFrom, dateTo) {
               <th style="${sH(4)}">ROAS</th>
               <th style="${sH(5)}">Orders</th>
               ${dates.map(d => `<th style="min-width:82px;text-align:center;font-weight:600">${fmtDateCol(d)}<div style="font-size:9px;font-weight:400;color:#94a3b8;margin-top:2px">Cost · Rev · ROAS</div></th>`).join('')}
+              <th>Keputusan</th>
+              <th style="position:sticky;right:0;background:#f8f9fe;z-index:4;box-shadow:-2px 0 6px rgba(0,0,0,0.06)">Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -478,6 +493,11 @@ function renderVideoCards(videos, dateFrom, dateTo) {
                 </td>`;
               }).join('');
 
+              const dec = decisionsMap[v.video_id];
+              const decBadge = dec
+                ? `<span class="badge badge-${dec.keputusan}">${dec.keputusan}</span>`
+                : '<span class="badge badge-gray">-</span>';
+
               return `<tr style="border-top:1px solid #f1f5f9">
                 <td class="td-video" style="${sD(0)}">
                   <div class="vtitle">${v.video_title && v.video_title !== v.video_id ? v.video_title.slice(0,40) : 'ID: '+v.video_id.slice(-10)}</div>
@@ -495,6 +515,10 @@ function renderVideoCards(videos, dateFrom, dateTo) {
                 <td style="${sD(4)}"><span class="${roasClass(avgRoas, thr.high, thr.mid)} num fw-700">${avgRoas > 0 ? avgRoas.toFixed(2)+'x' : '-'}</span></td>
                 <td style="${sD(5)}">${fmtNum(totalOrders)}</td>
                 ${dateCols}
+                <td style="text-align:center">${decBadge}</td>
+                <td style="position:sticky;right:0;background:#fff;z-index:2;box-shadow:-2px 0 6px rgba(0,0,0,0.06);text-align:center">
+                  <button class="btn btn-primary-sm btn-sm" onclick="openDecisionModalH('${v.video_id}','${(v.video_title||'').replace(/'/g,'')}')">Keputusan</button>
+                </td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -762,6 +786,59 @@ async function doUploadHarian() {
 function showErrH(el, msg) {
   el.textContent = msg;
   el.style.display = 'block';
+}
+
+// ============ KEPUTUSAN ============
+function openDecisionModalH(videoId, videoTitle) {
+  _modalVideoId = videoId;
+  document.getElementById('modal-dec-h-title').textContent = videoTitle || videoId;
+  const dec = decisionsMap[videoId];
+  document.getElementById('modal-dec-h-info').innerHTML = dec
+    ? `Keputusan saat ini: <span class="badge badge-${dec.keputusan}">${dec.keputusan}</span>`
+    : 'Belum ada keputusan untuk video ini.';
+  document.getElementById('dec-h-value').value = dec?.keputusan || '';
+  document.getElementById('dec-h-note').value = '';
+  document.getElementById('dec-h-err').style.display = 'none';
+  ['scale','kill','monitor'].forEach(d => {
+    document.getElementById('dec-h-'+d).classList.toggle('active', dec?.keputusan === d);
+  });
+  document.getElementById('modal-decision-h').classList.add('open');
+}
+
+function closeDecisionModalH() {
+  document.getElementById('modal-decision-h').classList.remove('open');
+  _modalVideoId = null;
+}
+
+function setDecisionH(val) {
+  document.getElementById('dec-h-value').value = val;
+  ['scale','kill','monitor'].forEach(d => {
+    document.getElementById('dec-h-'+d).classList.toggle('active', d === val);
+  });
+}
+
+async function saveDecisionH() {
+  const keputusan = document.getElementById('dec-h-value').value;
+  const catatan   = document.getElementById('dec-h-note').value.trim();
+  const errEl     = document.getElementById('dec-h-err');
+  errEl.style.display = 'none';
+  if (!keputusan) { errEl.textContent = 'Pilih keputusan dulu.'; errEl.style.display = 'block'; return; }
+
+  const uid = (await getUser()).id;
+  const { error } = await db().from('video_decisions').insert({
+    video_id: _modalVideoId,
+    user_id:  uid,
+    keputusan,
+    catatan:  catatan || null,
+    waktu_mulai: new Date().toISOString(),
+  });
+  if (error) { errEl.textContent = 'Gagal simpan: ' + error.message; errEl.style.display = 'block'; return; }
+
+  decisionsMap[_modalVideoId] = { video_id: _modalVideoId, keputusan, waktu_mulai: new Date().toISOString() };
+  clearVthCache();
+  showToast(`Keputusan "${keputusan}" disimpan!`, 'success');
+  closeDecisionModalH();
+  processAndRender();
 }
 
 function copyText(text, el) {
