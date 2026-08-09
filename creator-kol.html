@@ -32,7 +32,7 @@
 
       <!-- Stat Cards -->
       <div class="creator-stat-grid" id="kol-stats">
-        <div class="creator-stat-card">
+        <div class="creator-stat-card" id="card-total" onclick="setCardFilter('total')" style="cursor:pointer;">
           <div class="creator-stat-icon purple">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
@@ -41,7 +41,7 @@
             <div class="label">Total KOL</div>
           </div>
         </div>
-        <div class="creator-stat-card">
+        <div class="creator-stat-card" id="card-deal" onclick="setCardFilter('deal')" style="cursor:pointer;">
           <div class="creator-stat-icon green">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
@@ -50,7 +50,7 @@
             <div class="label">Sudah Deal</div>
           </div>
         </div>
-        <div class="creator-stat-card">
+        <div class="creator-stat-card" id="card-priority" onclick="setCardFilter('priority')" style="cursor:pointer;">
           <div class="creator-stat-icon orange">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
           </div>
@@ -108,6 +108,7 @@
       </div>
 
       <!-- Tabel KOL -->
+      <div id="kol-pagination"></div>
       <div class="table-wrap">
         <table class="data-table" id="kol-table">
           <thead>
@@ -116,8 +117,6 @@
               <th>TikTok</th>
               <th>Followers</th>
               <th>Tier</th>
-              <th>Score</th>
-              <th>Status</th>
               <th>Toko</th>
               <th>Niche / Produk</th>
               <th>Video</th>
@@ -126,7 +125,7 @@
             </tr>
           </thead>
           <tbody id="kol-tbody">
-            <tr><td colspan="11" style="text-align:center;padding:40px;color:#94a3b8;">Memuat data...</td></tr>
+            <tr><td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;">Memuat data...</td></tr>
           </tbody>
         </table>
       </div>

@@ -32,7 +32,7 @@
 
       <!-- Stat Cards -->
       <div class="creator-stat-grid" id="aff-stats">
-        <div class="creator-stat-card">
+        <div class="creator-stat-card" id="card-total" onclick="setCardFilter('total')" style="cursor:pointer;">
           <div class="creator-stat-icon purple">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
           </div>
@@ -41,7 +41,7 @@
             <div class="label">Total Affiliator</div>
           </div>
         </div>
-        <div class="creator-stat-card">
+        <div class="creator-stat-card" id="card-deal" onclick="setCardFilter('deal')" style="cursor:pointer;">
           <div class="creator-stat-icon green">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
@@ -50,7 +50,7 @@
             <div class="label">Sudah Deal</div>
           </div>
         </div>
-        <div class="creator-stat-card">
+        <div class="creator-stat-card" id="card-priority" onclick="setCardFilter('priority')" style="cursor:pointer;">
           <div class="creator-stat-icon orange">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
           </div>
@@ -88,6 +88,7 @@
       </div>
 
       <!-- Tabel Affiliator -->
+      <div id="aff-pagination"></div>
       <div class="table-wrap">
         <table class="data-table" id="aff-table">
           <thead>
