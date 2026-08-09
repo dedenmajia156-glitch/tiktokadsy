@@ -45,6 +45,24 @@
           </div>
         </div>
 
+        <div style="margin-bottom:14px;">
+          <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:6px;">Toko <span style="color:#ef4444;">*</span></label>
+          <select id="inp-toko" onchange="onTokoChange()"
+            style="width:100%;border:1px solid #e2e8f0;border-radius:10px;padding:0 12px;font-family:inherit;font-size:13px;height:40px;outline:none;transition:border .2s;"
+            onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='#e2e8f0'">
+            <option value="">— Pilih Toko —</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom:14px;">
+          <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:6px;">Produk</label>
+          <select id="inp-produk"
+            style="width:100%;border:1px solid #e2e8f0;border-radius:10px;padding:0 12px;font-family:inherit;font-size:13px;height:40px;outline:none;transition:border .2s;"
+            onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='#e2e8f0'">
+            <option value="">— Pilih Produk (opsional) —</option>
+          </select>
+        </div>
+
         <div style="margin-bottom:18px;">
           <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:6px;">Catatan / Alasan Request</label>
           <textarea id="inp-catatan" rows="3" placeholder="Contoh: KOL ini bagus untuk produk X, followernya relevan dengan target market kita..."
@@ -77,13 +95,15 @@
             <tr>
               <th>Tanggal</th>
               <th>Username TikTok</th>
+              <th>Toko</th>
+              <th>Produk</th>
               <th>Catatan</th>
               <th>Advertiser</th>
               <th>Status</th>
             </tr>
           </thead>
           <tbody id="req-tbody">
-            <tr><td colspan="5" style="text-align:center;padding:40px;color:#94a3b8;">Memuat data...</td></tr>
+            <tr><td colspan="7" style="text-align:center;padding:40px;color:#94a3b8;">Memuat data...</td></tr>
           </tbody>
         </table>
       </div>
