@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="img/logo-adsy.png">
+<title>Affiliator — Ads Dashboard GMV</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/kol-db.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/adv-switcher.js"></script>
+</head>
+<body>
+<div class="app-wrap">
+  <div id="sidebar-container"></div>
+  <div class="main-content">
+    <div id="topbar-container"></div>
+    <div class="page-content">
+
+      <div class="page-header">
+        <div>
+          <h2>🤝 Affiliator</h2>
+          <p>Data Affiliator dari KOL Management</p>
+        </div>
+      </div>
+
+      <!-- Stat Cards -->
+      <div class="creator-stat-grid" id="aff-stats">
+        <div class="creator-stat-card">
+          <div class="creator-stat-icon purple">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+          </div>
+          <div class="creator-stat-info">
+            <div class="value" id="stat-total">—</div>
+            <div class="label">Total Affiliator</div>
+          </div>
+        </div>
+        <div class="creator-stat-card">
+          <div class="creator-stat-icon green">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="creator-stat-info">
+            <div class="value" id="stat-deal">—</div>
+            <div class="label">Sudah Deal</div>
+          </div>
+        </div>
+        <div class="creator-stat-card">
+          <div class="creator-stat-icon orange">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+          <div class="creator-stat-info">
+            <div class="value" id="stat-priority">—</div>
+            <div class="label">Talent Prioritas</div>
+          </div>
+        </div>
+        <div class="creator-stat-card">
+          <div class="creator-stat-icon pink">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          </div>
+          <div class="creator-stat-info">
+            <div class="value" id="stat-videos">—</div>
+            <div class="label">Total Video</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="filter-bar" style="margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+        <label>Evaluasi:</label>
+        <select id="fil-eval">
+          <option value="">Semua Hasil</option>
+          <option value="Bagus">Bagus</option>
+          <option value="Cukup">Cukup</option>
+          <option value="Kurang">Kurang</option>
+          <option value="__none">Belum Dievaluasi</option>
+        </select>
+        <input type="text" id="fil-search" placeholder="Cari nama / TikTok..." style="min-width:180px;">
+      </div>
+
+      <!-- Tabel Affiliator -->
+      <div class="table-wrap">
+        <table class="data-table" id="aff-table">
+          <thead>
+            <tr>
+              <th>Nama Affiliator</th>
+              <th>TikTok</th>
+              <th>Followers</th>
+              <th>Niche / Produk</th>
+              <th>Video</th>
+              <th>Views Total</th>
+              <th>Evaluasi</th>
+              <th>Prioritas</th>
+            </tr>
+          </thead>
+          <tbody id="aff-tbody">
+            <tr><td colspan="8" style="text-align:center;padding:40px;color:#94a3b8;">Memuat data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div id="toast-container" class="toast-container"></div>
+    </div>
+  </div>
+</div>
+<script src="js/creator-affiliator.js"></script>
+</body>
+</html>
