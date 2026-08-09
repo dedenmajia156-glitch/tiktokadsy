@@ -58,7 +58,7 @@ function renderNav(activePage, pageTitle) {
       </a>
 
       <div class="nav-section-title" style="margin-top:8px">Creator</div>
-      <div class="nav-group ${['creator-kol','creator-affiliator'].includes(activePage) ? 'open' : ''}" id="nav-group-creator">
+      <div class="nav-group ${['creator-kol','creator-affiliator','request-creator'].includes(activePage) ? 'open' : ''}" id="nav-group-creator">
         <div class="nav-group-header" onclick="toggleNavGroup('nav-group-creator')">
           <span class="icon">${NAV_ICONS.creator}</span>
           Creator
@@ -70,6 +70,9 @@ function renderNav(activePage, pageTitle) {
           </a>
           <a href="creator-affiliator.html" class="nav-sub-link" data-page="creator-affiliator">
             <span class="icon">${NAV_ICONS.affiliator}</span> Affiliator
+          </a>
+          <a href="request-creator.html" class="nav-sub-link" data-page="request-creator">
+            <span class="icon">${ic(`<path d='M12 5v14'/><path d='M5 12h14'/>`)}</span> Request Creator
           </a>
         </div>
       </div>

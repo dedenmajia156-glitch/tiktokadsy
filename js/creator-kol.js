@@ -212,9 +212,10 @@ function renderTable(rows) {
       </td>
       <td>
         ${videos.filter(v => v.kode_boost).length
-          ? videos.filter(v => v.kode_boost).map(v =>
-              `<div style="margin-bottom:4px;"><span onclick="copyKodeBoost('${escHtml(v.kode_boost)}')" style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;cursor:pointer;" title="Klik untuk copy">${escHtml(v.kode_boost)}</span></div>`
-            ).join('')
+          ? videos.filter(v => v.kode_boost).map(v => {
+              const short = v.kode_boost.slice(0, 10) + '...';
+              return `<div style="margin-bottom:4px;"><span onclick="copyKodeBoost('${escHtml(v.kode_boost)}')" style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;cursor:pointer;" title="${escHtml(v.kode_boost)}">${escHtml(short)}</span></div>`;
+            }).join('')
           : '<span style="color:#94a3b8;font-size:12px;">—</span>'}
       </td>
       <td>${evalBadge(evalRes)}</td>
@@ -248,7 +249,8 @@ function openCatatanModal(kolId, kolName) {
   _activeKolName = kolName;
   document.getElementById('modal-kol-name').textContent = kolName;
   document.getElementById('catatan-input').value = '';
-  document.getElementById('modal-catatan').style.display = 'flex';
+  const modal = document.getElementById('modal-catatan');
+  modal.style.display = 'flex';
   loadCatatanList(kolId);
 }
 
