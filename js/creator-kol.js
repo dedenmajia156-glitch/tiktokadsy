@@ -139,21 +139,19 @@ function renderTable(rows) {
         ${k.niche ? `<div style="color:#94a3b8;">${escHtml(k.niche)}</div>` : ''}
         ${!listing?.produk && !k.niche ? '—' : ''}
       </td>
-      <td style="min-width:160px;">
-        ${videos.length ? videos.map(v =>
-          v.link_video
-            ? `<div style="margin-bottom:4px;"><a href="${escHtml(v.link_video)}" target="_blank" style="color:var(--primary);font-size:12px;text-decoration:none;">▶ ${escHtml(v.judul || 'Video')}</a></div>`
-            : `<div style="margin-bottom:4px;"><span style="font-size:12px;color:#94a3b8;">▶ ${escHtml(v.judul || 'Video')}</span></div>`
-        ).join('')
+      <td style="min-width:140px;">
+        ${videos.length ? videos.map(v => {
+          const judul = (v.judul || 'Video').slice(0, 22) + ((v.judul || '').length > 22 ? '...' : '');
+          return v.link_video
+            ? `<div style="margin-bottom:4px;"><a href="${escHtml(v.link_video)}" target="_blank" style="color:var(--primary);font-size:12px;text-decoration:none;">▶ ${escHtml(judul)}</a></div>`
+            : `<div style="margin-bottom:4px;"><span style="font-size:12px;color:#94a3b8;">▶ ${escHtml(judul)}</span></div>`;
+        }).join('')
         : '<span style="color:#94a3b8;font-size:12px;">—</span>'}
       </td>
       <td>
-        ${videos.length ? videos.map(v =>
-          v.kode_boost
-            ? `<div style="margin-bottom:4px;"><span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;">${escHtml(v.kode_boost)}</span></div>`
-            : `<div style="margin-bottom:4px;color:#94a3b8;font-size:12px;">—</div>`
-        ).join('')
-        : '<span style="color:#94a3b8;font-size:12px;">—</span>'}
+        ${listing?.kode_boost
+          ? `<span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;">${escHtml(listing.kode_boost)}</span>`
+          : '<span style="color:#94a3b8;font-size:12px;">—</span>'}
       </td>
       <td>${evalBadge(evalRes)}</td>
     </tr>`;
@@ -186,7 +184,7 @@ async function loadKolData() {
         .eq('kol_type', 'kol')
         .order('created_at', { ascending: false }),
       kolDb().from('kol_listing')
-        .select('id, kol_id, toko, produk, eval_views, eval_rating, eval_result, eval_notes'),
+        .select('id, kol_id, toko, produk, kode_boost, eval_views, eval_rating, eval_result, eval_notes'),
       kolDb().from('kol_videos')
         .select('id, kol_id, link_video, judul, upload_date, kode_boost'),
       kolDb().from('kol_master')
