@@ -172,7 +172,7 @@ async function loadAffiliatorData() {
       kolDb().from('kol_listing')
         .select('id, kol_id, toko, produk, kode_boost, eval_views, eval_rating, eval_result, eval_notes'),
       kolDb().from('kol_videos')
-        .select('id, kol_id, link_video, judul, upload_date'),
+        .select('id, kol_id, link_video, judul, upload_date, kode_boost'),
       kolDb().from('kol_views_log')
         .select('kol_id, views'),
       kolDb().from('kol_master')
