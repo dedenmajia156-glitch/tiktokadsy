@@ -81,9 +81,9 @@ function applyFilters() {
     if (status && k.status !== status) return false;
     if (tier && (k.tier || '').toLowerCase() !== tier) return false;
 
-    const evalResult = listing?.eval_result || null;
+    const evalResult = (listing?.eval_result || '').toLowerCase();
     if (eval_ === '__none' && evalResult) return false;
-    if (eval_ && eval_ !== '__none' && evalResult !== eval_) return false;
+    if (eval_ && eval_ !== '__none' && evalResult !== eval_.toLowerCase()) return false;
 
     if (q) {
       const hay = [k.name, k.tiktok, k.niche, k.product].join(' ').toLowerCase();
@@ -139,7 +139,22 @@ function renderTable(rows) {
         ${k.niche ? `<div style="color:#94a3b8;">${escHtml(k.niche)}</div>` : ''}
         ${!listing?.produk && !k.niche ? '—' : ''}
       </td>
-      <td style="text-align:center;font-weight:600;">${videos.length || '—'}</td>
+      <td style="min-width:200px;">
+        ${videos.length ? videos.map(v => `
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+            ${v.link_video
+              ? `<a href="${escHtml(v.link_video)}" target="_blank" style="color:var(--primary);font-size:12px;text-decoration:none;white-space:nowrap;">
+                  ▶ ${escHtml(v.judul || 'Video')}
+                </a>`
+              : `<span style="font-size:12px;color:#94a3b8;">▶ ${escHtml(v.judul || 'Video')}</span>`
+            }
+            ${v.kode_boost
+              ? `<span style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;">${escHtml(v.kode_boost)}</span>`
+              : ''
+            }
+          </div>`).join('')
+        : '<span style="color:#94a3b8;font-size:12px;">—</span>'}
+      </td>
       <td>${evalBadge(evalRes)}</td>
     </tr>`;
   }).join('');
@@ -197,7 +212,7 @@ async function loadKolData() {
 
     populateTokoDropdown();
     renderStats(_kolAll);
-    renderTable(_kolAll);
+    renderTable(applyFilters());
 
   } catch (err) {
     console.error('KOL load error:', err);
