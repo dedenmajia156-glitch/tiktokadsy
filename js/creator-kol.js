@@ -96,7 +96,7 @@ function applyFilters() {
 function renderTable(rows) {
   const tbody = document.getElementById('kol-tbody');
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="10">
+    tbody.innerHTML = `<tr><td colspan="11">
       <div class="no-data-state">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <p>Tidak ada data yang sesuai filter</p>
@@ -139,20 +139,20 @@ function renderTable(rows) {
         ${k.niche ? `<div style="color:#94a3b8;">${escHtml(k.niche)}</div>` : ''}
         ${!listing?.produk && !k.niche ? '—' : ''}
       </td>
-      <td style="min-width:200px;">
-        ${videos.length ? videos.map(v => `
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
-            ${v.link_video
-              ? `<a href="${escHtml(v.link_video)}" target="_blank" style="color:var(--primary);font-size:12px;text-decoration:none;white-space:nowrap;">
-                  ▶ ${escHtml(v.judul || 'Video')}
-                </a>`
-              : `<span style="font-size:12px;color:#94a3b8;">▶ ${escHtml(v.judul || 'Video')}</span>`
-            }
-            ${v.kode_boost
-              ? `<span style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;">${escHtml(v.kode_boost)}</span>`
-              : ''
-            }
-          </div>`).join('')
+      <td style="min-width:160px;">
+        ${videos.length ? videos.map(v =>
+          v.link_video
+            ? `<div style="margin-bottom:4px;"><a href="${escHtml(v.link_video)}" target="_blank" style="color:var(--primary);font-size:12px;text-decoration:none;">▶ ${escHtml(v.judul || 'Video')}</a></div>`
+            : `<div style="margin-bottom:4px;"><span style="font-size:12px;color:#94a3b8;">▶ ${escHtml(v.judul || 'Video')}</span></div>`
+        ).join('')
+        : '<span style="color:#94a3b8;font-size:12px;">—</span>'}
+      </td>
+      <td>
+        ${videos.length ? videos.map(v =>
+          v.kode_boost
+            ? `<div style="margin-bottom:4px;"><span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;">${escHtml(v.kode_boost)}</span></div>`
+            : `<div style="margin-bottom:4px;color:#94a3b8;font-size:12px;">—</div>`
+        ).join('')
         : '<span style="color:#94a3b8;font-size:12px;">—</span>'}
       </td>
       <td>${evalBadge(evalRes)}</td>
@@ -216,7 +216,7 @@ async function loadKolData() {
 
   } catch (err) {
     console.error('KOL load error:', err);
-    document.getElementById('kol-tbody').innerHTML = `<tr><td colspan="10">
+    document.getElementById('kol-tbody').innerHTML = `<tr><td colspan="11">
       <div class="no-data-state">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         <p>Gagal memuat data KOL.</p>
