@@ -12,6 +12,11 @@ const NAV_ICONS = {
   users:         ic(`<path d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'/><circle cx='9' cy='7' r='4'/><path d='M22 21v-2a4 4 0 0 0-3-3.87'/><path d='M16 3.13a4 4 0 0 1 0 7.75'/>`),
   settings:      ic(`<path d='M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z'/><circle cx='12' cy='12' r='3'/>`),
   signout:       ic(`<path d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'/><polyline points='16 17 21 12 16 7'/><line x1='21' y1='12' x2='9' y2='12'/>`),
+  // Creator submenu
+  creator:       ic(`<path d='M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2'/><circle cx='9' cy='7' r='4'/><path d='M23 21v-2a4 4 0 0 0-3-3.87'/><path d='M16 3.13a4 4 0 0 1 0 7.75'/>`),
+  kol:           ic(`<circle cx='12' cy='8' r='5'/><path d='M3 21a9 9 0 0 1 18 0'/><path d='M12 13v3'/><path d='M9 16h6'/>`),
+  affiliator:    ic(`<path d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'/><circle cx='9' cy='7' r='4'/><line x1='19' y1='8' x2='19' y2='14'/><line x1='22' y1='11' x2='16' y2='11'/>`),
+  chevron:       ic(`<polyline points='9 18 15 12 9 6'/>`),
 };
 
 // Render sidebar + topbar ke dalam elemen target
@@ -51,6 +56,23 @@ function renderNav(activePage, pageTitle) {
       <a href="topup.html" class="nav-link" data-page="topup">
         <span class="icon">${NAV_ICONS['topup']}</span> Top Up
       </a>
+
+      <div class="nav-section-title" style="margin-top:8px">Creator</div>
+      <div class="nav-group ${['creator-kol','creator-affiliator'].includes(activePage) ? 'open' : ''}" id="nav-group-creator">
+        <div class="nav-group-header" onclick="toggleNavGroup('nav-group-creator')">
+          <span class="icon">${NAV_ICONS.creator}</span>
+          Creator
+          <span class="nav-chevron">${NAV_ICONS.chevron}</span>
+        </div>
+        <div class="nav-submenu">
+          <a href="creator-kol.html" class="nav-sub-link" data-page="creator-kol">
+            <span class="icon">${NAV_ICONS.kol}</span> KOL
+          </a>
+          <a href="creator-affiliator.html" class="nav-sub-link" data-page="creator-affiliator">
+            <span class="icon">${NAV_ICONS.affiliator}</span> Affiliator
+          </a>
+        </div>
+      </div>
 
       <div class="nav-section-title" style="margin-top:8px">Pengaturan</div>
       <a href="produk.html" class="nav-link" data-page="produk">
@@ -107,10 +129,19 @@ function renderNav(activePage, pageTitle) {
   document.getElementById('sidebar-container').innerHTML = sidebarHTML;
   document.getElementById('topbar-container').innerHTML = topbarHTML;
 
-  // set active menu
+  // set active menu (nav-link)
   document.querySelectorAll('.nav-link').forEach(el => {
     el.classList.toggle('active', el.dataset.page === activePage);
   });
+  // set active sub-link
+  document.querySelectorAll('.nav-sub-link').forEach(el => {
+    el.classList.toggle('active', el.dataset.page === activePage);
+  });
+}
+
+function toggleNavGroup(id) {
+  const group = document.getElementById(id);
+  if (group) group.classList.toggle('open');
 }
 
 async function initPage(activePage, pageTitle) {
