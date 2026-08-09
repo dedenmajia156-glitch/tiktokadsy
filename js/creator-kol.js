@@ -36,10 +36,12 @@ function fmtFollowers(n) {
 }
 
 function renderStats(data) {
-  const total    = data.length;
-  const deal     = data.filter(k => k.status === 'deal').length;
-  const priority = data.filter(k => k.is_priority).length;
-  const scores   = data.map(k => k.score || 0).filter(s => s > 0);
+  // Hanya hitung dari yang sudah listing
+  const listed   = data.filter(k => _listingMap[k.id]);
+  const total    = listed.length;
+  const deal     = listed.filter(k => k.status === 'deal').length;
+  const priority = listed.filter(k => k.is_priority).length;
+  const scores   = listed.map(k => k.score || 0).filter(s => s > 0);
   const avgScore = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
 
   document.getElementById('stat-total').textContent    = total;
@@ -66,6 +68,9 @@ function applyFilters() {
 
   return _kolAll.filter(k => {
     const listing = _listingMap[k.id];
+
+    // Hanya tampilkan yang sudah listing
+    if (!listing) return false;
 
     // Filter toko: match via kol_listing.toko
     if (toko) {
