@@ -149,8 +149,10 @@ function renderTable(rows) {
         : '<span style="color:#94a3b8;font-size:12px;">—</span>'}
       </td>
       <td>
-        ${listing?.kode_boost
-          ? `<span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;">${escHtml(listing.kode_boost)}</span>`
+        ${videos.filter(v => v.kode_boost).length
+          ? videos.filter(v => v.kode_boost).map(v =>
+              `<div style="margin-bottom:4px;"><span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;">${escHtml(v.kode_boost)}</span></div>`
+            ).join('')
           : '<span style="color:#94a3b8;font-size:12px;">—</span>'}
       </td>
       <td>${evalBadge(evalRes)}</td>
