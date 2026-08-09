@@ -8,7 +8,11 @@ let _viewsMap   = {}; // { kol_id: total views }
 let _tokoList   = []; // [ { id, name } ] dari kol_master
 let _currentPage      = 1;
 const PAGE_SIZE       = 20;
-let _activeCardFilter = null; // 'deal' | 'priority' | null
+let _activeCardFilter = null;
+let _requestsMap      = {}; // { kol_id: count }
+let _activeKolId      = null;
+let _activeKolName    = null;
+let _myProfile        = null;
 
 function evalBadge(result) {
   if (!result) return '<span style="color:#94a3b8;font-size:12px;">—</span>';
@@ -33,6 +37,91 @@ function fmtViews(n) {
 
 function copyKodeBoost(kode) {
   navigator.clipboard.writeText(kode).then(() => showToast('Kode boost di-copy!', 'success'));
+}
+
+// ── CATATAN ──
+async function loadRequestsCount() {
+  try {
+    const { data } = await kolDb().from('kol_requests').select('kol_id');
+    _requestsMap = {};
+    (data || []).forEach(r => {
+      _requestsMap[r.kol_id] = (_requestsMap[r.kol_id] || 0) + 1;
+    });
+  } catch(_) {}
+}
+
+function openCatatanModal(kolId, kolName) {
+  _activeKolId   = kolId;
+  _activeKolName = kolName;
+  document.getElementById('modal-kol-name').textContent = kolName;
+  document.getElementById('catatan-input').value = '';
+  document.getElementById('modal-catatan').style.display = 'flex';
+  loadCatatanList(kolId);
+}
+
+function closeCatatanModal(e) {
+  if (e && e.target !== document.getElementById('modal-catatan')) return;
+  document.getElementById('modal-catatan').style.display = 'none';
+}
+
+async function loadCatatanList(kolId) {
+  const listEl = document.getElementById('catatan-list');
+  listEl.innerHTML = '<div style="text-align:center;color:#94a3b8;font-size:13px;padding:20px;">Memuat...</div>';
+  try {
+    const { data } = await kolDb()
+      .from('kol_requests')
+      .select('*')
+      .eq('kol_id', kolId)
+      .order('created_at', { ascending: false });
+
+    if (!data?.length) {
+      listEl.innerHTML = '<div style="text-align:center;color:#94a3b8;font-size:13px;padding:20px;">Belum ada catatan</div>';
+      return;
+    }
+
+    const fmtDate = ts => new Date(ts).toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+
+    listEl.innerHTML = data.map(r => `
+      <div style="background:#f8fafc;border-radius:10px;padding:10px 12px;">
+        <div style="font-size:12px;font-weight:600;color:var(--primary);">${escHtml(r.advertiser_name || 'Advertiser')}</div>
+        <div style="font-size:13px;color:var(--text);margin:4px 0;">${escHtml(r.catatan)}</div>
+        <div style="font-size:11px;color:#94a3b8;">${fmtDate(r.created_at)}</div>
+      </div>`).join('');
+  } catch(e) {
+    listEl.innerHTML = '<div style="text-align:center;color:#ef4444;font-size:13px;padding:20px;">Gagal memuat catatan</div>';
+  }
+}
+
+async function saveCatatan() {
+  const catatan = document.getElementById('catatan-input').value.trim();
+  if (!catatan) { showToast('Catatan tidak boleh kosong', 'error'); return; }
+
+  const btn = document.querySelector('#modal-catatan .btn-primary');
+  btn.textContent = 'Menyimpan...';
+  btn.disabled = true;
+
+  try {
+    const { error } = await kolDb().from('kol_requests').insert({
+      kol_id:          _activeKolId,
+      kol_name:        _activeKolName,
+      catatan,
+      advertiser_name: _myProfile?.nama || 'Advertiser',
+      advertiser_id:   _myProfile?.id   || null,
+    });
+    if (error) throw error;
+
+    _requestsMap[_activeKolId] = (_requestsMap[_activeKolId] || 0) + 1;
+    renderTable(applyFilters());
+
+    document.getElementById('catatan-input').value = '';
+    showToast('Catatan berhasil dikirim!', 'success');
+    loadCatatanList(_activeKolId);
+  } catch(e) {
+    showToast('Gagal menyimpan catatan', 'error');
+  } finally {
+    btn.textContent = 'Kirim Catatan';
+    btn.disabled = false;
+  }
 }
 
 function escHtml(str) {
@@ -138,7 +227,7 @@ function renderTable(rows) {
   renderPagination(rows.length);
   const paged = rows.slice((_currentPage - 1) * PAGE_SIZE, _currentPage * PAGE_SIZE);
   if (!paged.length) {
-    tbody.innerHTML = `<tr><td colspan="10">
+    tbody.innerHTML = `<tr><td colspan="11">
       <div class="no-data-state">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <p>Tidak ada data yang sesuai filter</p>
@@ -199,6 +288,12 @@ function renderTable(rows) {
       <td style="text-align:center;">${fmtViews(totalViews)}</td>
       <td>${evalBadge(evalRes)}</td>
       <td>${priorityLabel}</td>
+      <td style="text-align:center;">
+        <button onclick="openCatatanModal('${escHtml(k.id)}','${escHtml(k.name || '')}')"
+          style="background:${_requestsMap[k.id] ? '#ede9fe' : '#f1f5f9'};color:${_requestsMap[k.id] ? '#7c3aed' : '#64748b'};border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;">
+          💬 ${_requestsMap[k.id] ? _requestsMap[k.id] : 'Tulis'}
+        </button>
+      </td>
     </tr>`;
   }).join('');
 }
@@ -270,7 +365,7 @@ async function loadAffiliatorData() {
 
   } catch (err) {
     console.error('Affiliator load error:', err);
-    document.getElementById('aff-tbody').innerHTML = `<tr><td colspan="10">
+    document.getElementById('aff-tbody').innerHTML = `<tr><td colspan="11">
       <div class="no-data-state">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         <p>Gagal memuat data Affiliator.</p>
@@ -282,7 +377,7 @@ async function loadAffiliatorData() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  await initPage('creator-affiliator', 'Affiliator');
+  _myProfile = await initPage('creator-affiliator', 'Affiliator');
   bindFilters();
-  await loadAffiliatorData();
+  await Promise.all([loadAffiliatorData(), loadRequestsCount()]);
 });
