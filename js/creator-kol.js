@@ -5,6 +5,9 @@ let _kolAll    = [];  // semua KOL
 let _listingMap = {}; // { kol_id: listingRecord }
 let _videosMap  = {}; // { kol_id: [ videoRecord ] }
 let _tokoList   = []; // [ { id, name } ] dari kol_master
+let _currentPage   = 1;
+const PAGE_SIZE    = 20;
+let _activeCardFilter = null; // 'deal' | 'priority' | null
 
 const STATUS_LABEL = {
   new: 'Belum Hubungi', contacted: 'Dihubungi',
@@ -36,7 +39,6 @@ function fmtFollowers(n) {
 }
 
 function renderStats(data) {
-  // Hanya hitung dari yang sudah listing
   const listed   = data.filter(k => _listingMap[k.id]);
   const total    = listed.length;
   const deal     = listed.filter(k => k.status === 'deal').length;
@@ -48,6 +50,27 @@ function renderStats(data) {
   document.getElementById('stat-deal').textContent     = deal;
   document.getElementById('stat-priority').textContent = priority;
   document.getElementById('stat-avgscore').textContent = avgScore || '—';
+}
+
+function setCardFilter(type) {
+  // Toggle: klik card yang sama → reset
+  _activeCardFilter = _activeCardFilter === type ? null : type;
+
+  // Update visual aktif
+  document.querySelectorAll('.creator-stat-card').forEach(el => el.classList.remove('card-active'));
+  if (_activeCardFilter) {
+    document.getElementById(`card-${_activeCardFilter}`)?.classList.add('card-active');
+  }
+
+  // Reset status dropdown kalau filter dari card
+  if (_activeCardFilter !== 'deal') {
+    document.getElementById('fil-status').value = '';
+  } else {
+    document.getElementById('fil-status').value = 'deal';
+  }
+
+  _currentPage = 1;
+  renderTable(applyFilters());
 }
 
 function populateTokoDropdown() {
@@ -72,6 +95,9 @@ function applyFilters() {
     // Hanya tampilkan yang sudah listing
     if (!listing) return false;
 
+    // Filter dari card
+    if (_activeCardFilter === 'priority' && !k.is_priority) return false;
+
     // Filter toko: match via kol_listing.toko
     if (toko) {
       const listingToko = (listing?.toko || '').trim();
@@ -93,10 +119,44 @@ function applyFilters() {
   });
 }
 
+function renderPagination(total) {
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const el = document.getElementById('kol-pagination');
+  if (!el) return;
+
+  if (totalPages <= 1) { el.innerHTML = ''; return; }
+
+  const from = (_currentPage - 1) * PAGE_SIZE + 1;
+  const to   = Math.min(_currentPage * PAGE_SIZE, total);
+
+  el.innerHTML = `
+    <div class="pagination-wrap">
+      <span class="pag-info">${from}–${to} dari ${total} KOL</span>
+      <div class="pag-controls">
+        <button class="pag-btn" onclick="goPage(${_currentPage - 1})" ${_currentPage === 1 ? 'disabled' : ''}>‹ Prev</button>
+        ${Array.from({length: totalPages}, (_,i) => i+1).map(p =>
+          `<button class="pag-btn ${p === _currentPage ? 'active' : ''}" onclick="goPage(${p})">${p}</button>`
+        ).join('')}
+        <button class="pag-btn" onclick="goPage(${_currentPage + 1})" ${_currentPage === totalPages ? 'disabled' : ''}>Next ›</button>
+      </div>
+    </div>`;
+}
+
+function goPage(p) {
+  const total = applyFilters().length;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  if (p < 1 || p > totalPages) return;
+  _currentPage = p;
+  renderTable(applyFilters());
+  document.querySelector('.table-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function renderTable(rows) {
   const tbody = document.getElementById('kol-tbody');
-  if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="11">
+  renderPagination(rows.length);
+  const paged = rows.slice((_currentPage - 1) * PAGE_SIZE, _currentPage * PAGE_SIZE);
+  if (!paged.length) {
+    tbody.innerHTML = `<tr><td colspan="9">
       <div class="no-data-state">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <p>Tidak ada data yang sesuai filter</p>
@@ -105,7 +165,7 @@ function renderTable(rows) {
     return;
   }
 
-  tbody.innerHTML = rows.map(k => {
+  tbody.innerHTML = paged.map(k => {
     const listing  = _listingMap[k.id];
     const videos   = _videosMap[k.id] || [];
     const evalRes  = listing?.eval_result || null;
@@ -131,8 +191,6 @@ function renderTable(rows) {
       <td>${tiktokLink}</td>
       <td style="font-size:13px;">${fmtFollowers(k.followers)}</td>
       <td>${tierBadge(k.tier)}</td>
-      <td style="font-weight:700;font-size:13px;color:${scoreColor};">${score || '—'}</td>
-      <td>${statusBadge(k.status)}</td>
       <td>${tokoBadge}</td>
       <td style="font-size:12px;max-width:160px;">
         ${listing?.produk ? `<div style="font-weight:500;">${escHtml(listing.produk)}</div>` : ''}
@@ -151,13 +209,17 @@ function renderTable(rows) {
       <td>
         ${videos.filter(v => v.kode_boost).length
           ? videos.filter(v => v.kode_boost).map(v =>
-              `<div style="margin-bottom:4px;"><span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;">${escHtml(v.kode_boost)}</span></div>`
+              `<div style="margin-bottom:4px;"><span onclick="copyKodeBoost('${escHtml(v.kode_boost)}')" style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;cursor:pointer;" title="Klik untuk copy">${escHtml(v.kode_boost)}</span></div>`
             ).join('')
           : '<span style="color:#94a3b8;font-size:12px;">—</span>'}
       </td>
       <td>${evalBadge(evalRes)}</td>
     </tr>`;
   }).join('');
+}
+
+function copyKodeBoost(kode) {
+  navigator.clipboard.writeText(kode).then(() => showToast('Kode boost di-copy!', 'success'));
 }
 
 function escHtml(str) {
@@ -167,6 +229,7 @@ function escHtml(str) {
 function bindFilters() {
   ['fil-toko','fil-status','fil-tier','fil-eval','fil-search'].forEach(id => {
     document.getElementById(id)?.addEventListener('input', () => {
+      _currentPage = 1;
       renderTable(applyFilters());
     });
   });
@@ -216,7 +279,7 @@ async function loadKolData() {
 
   } catch (err) {
     console.error('KOL load error:', err);
-    document.getElementById('kol-tbody').innerHTML = `<tr><td colspan="11">
+    document.getElementById('kol-tbody').innerHTML = `<tr><td colspan="9">
       <div class="no-data-state">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         <p>Gagal memuat data KOL.</p>

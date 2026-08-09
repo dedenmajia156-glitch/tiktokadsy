@@ -6,6 +6,9 @@ let _listingMap = {}; // { kol_id: listingRecord }
 let _videosMap  = {}; // { kol_id: [ videoRecord ] }
 let _viewsMap   = {}; // { kol_id: total views }
 let _tokoList   = []; // [ { id, name } ] dari kol_master
+let _currentPage      = 1;
+const PAGE_SIZE       = 20;
+let _activeCardFilter = null; // 'deal' | 'priority' | null
 
 function evalBadge(result) {
   if (!result) return '<span style="color:#94a3b8;font-size:12px;">—</span>';
@@ -28,6 +31,10 @@ function fmtViews(n) {
   return n.toString();
 }
 
+function copyKodeBoost(kode) {
+  navigator.clipboard.writeText(kode).then(() => showToast('Kode boost di-copy!', 'success'));
+}
+
 function escHtml(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -42,6 +49,18 @@ function renderStats(data) {
   document.getElementById('stat-deal').textContent     = deal;
   document.getElementById('stat-priority').textContent = priority;
   document.getElementById('stat-videos').textContent   = totalVid || '—';
+}
+
+function setCardFilter(type) {
+  _activeCardFilter = _activeCardFilter === type ? null : type;
+
+  document.querySelectorAll('.creator-stat-card').forEach(el => el.classList.remove('card-active'));
+  if (_activeCardFilter) {
+    document.getElementById(`card-${_activeCardFilter}`)?.classList.add('card-active');
+  }
+
+  _currentPage = 1;
+  renderTable(applyFilters());
 }
 
 function populateTokoDropdown() {
@@ -62,6 +81,9 @@ function applyFilters() {
     const listing    = _listingMap[k.id];
     const evalResult = (listing?.eval_result || '').toLowerCase();
 
+    if (_activeCardFilter === 'deal'     && k.status !== 'deal') return false;
+    if (_activeCardFilter === 'priority' && !k.is_priority)      return false;
+
     // Filter toko: match via kol_listing.toko
     if (toko) {
       const listingToko = (listing?.toko || '').trim();
@@ -79,9 +101,43 @@ function applyFilters() {
   });
 }
 
+function renderPagination(total) {
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const el = document.getElementById('aff-pagination');
+  if (!el) return;
+
+  if (totalPages <= 1) { el.innerHTML = ''; return; }
+
+  const from = (_currentPage - 1) * PAGE_SIZE + 1;
+  const to   = Math.min(_currentPage * PAGE_SIZE, total);
+
+  el.innerHTML = `
+    <div class="pagination-wrap">
+      <span class="pag-info">${from}–${to} dari ${total} Affiliator</span>
+      <div class="pag-controls">
+        <button class="pag-btn" onclick="goPage(${_currentPage - 1})" ${_currentPage === 1 ? 'disabled' : ''}>‹ Prev</button>
+        ${Array.from({length: totalPages}, (_,i) => i+1).map(p =>
+          `<button class="pag-btn ${p === _currentPage ? 'active' : ''}" onclick="goPage(${p})">${p}</button>`
+        ).join('')}
+        <button class="pag-btn" onclick="goPage(${_currentPage + 1})" ${_currentPage === totalPages ? 'disabled' : ''}>Next ›</button>
+      </div>
+    </div>`;
+}
+
+function goPage(p) {
+  const total = applyFilters().length;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  if (p < 1 || p > totalPages) return;
+  _currentPage = p;
+  renderTable(applyFilters());
+  document.querySelector('.table-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function renderTable(rows) {
   const tbody = document.getElementById('aff-tbody');
-  if (!rows.length) {
+  renderPagination(rows.length);
+  const paged = rows.slice((_currentPage - 1) * PAGE_SIZE, _currentPage * PAGE_SIZE);
+  if (!paged.length) {
     tbody.innerHTML = `<tr><td colspan="10">
       <div class="no-data-state">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -91,7 +147,7 @@ function renderTable(rows) {
     return;
   }
 
-  tbody.innerHTML = rows.map(k => {
+  tbody.innerHTML = paged.map(k => {
     const listing    = _listingMap[k.id];
     const videos     = _videosMap[k.id] || [];
     const evalRes    = listing?.eval_result || null;
@@ -136,7 +192,7 @@ function renderTable(rows) {
       <td>
         ${videos.filter(v => v.kode_boost).length
           ? videos.filter(v => v.kode_boost).map(v =>
-              `<div style="margin-bottom:4px;"><span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;">${escHtml(v.kode_boost)}</span></div>`
+              `<div style="margin-bottom:4px;"><span onclick="copyKodeBoost('${escHtml(v.kode_boost)}')" style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;cursor:pointer;" title="Klik untuk copy">${escHtml(v.kode_boost)}</span></div>`
             ).join('')
           : '<span style="color:#94a3b8;font-size:12px;">—</span>'}
       </td>
@@ -150,6 +206,7 @@ function renderTable(rows) {
 function bindFilters() {
   ['fil-toko','fil-eval','fil-search'].forEach(id => {
     document.getElementById(id)?.addEventListener('input', () => {
+      _currentPage = 1;
       renderTable(applyFilters());
     });
   });
