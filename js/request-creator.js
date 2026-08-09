@@ -1,7 +1,9 @@
 // ===== REQUEST CREATOR PAGE =====
 
-let _myProfile = null;
+let _myProfile   = null;
 let _allRequests = [];
+let _tokoList    = [];
+let _produkList  = [];
 
 const STATUS_CONFIG = {
   pending:  { label: 'Pending',  bg: '#fef3c7', color: '#b45309' },
@@ -25,10 +27,31 @@ function fmtDate(ts) {
   });
 }
 
+async function loadMasterData() {
+  try {
+    const { data } = await kolDb().from('kol_master').select('*').order('name');
+    _tokoList   = (data || []).filter(r => r.type === 'toko');
+    _produkList = (data || []).filter(r => r.type === 'produk');
+    const sel = document.getElementById('inp-toko');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— Pilih Toko —</option>' +
+      _tokoList.map(t => `<option value="${t.id}">${escHtml(t.name)}</option>`).join('');
+  } catch(e) { console.error('loadMasterData:', e); }
+}
+
+function onTokoChange() {
+  const tokoId = document.getElementById('inp-toko').value;
+  const sel    = document.getElementById('inp-produk');
+  if (!sel) return;
+  const filtered = _produkList.filter(p => p.toko_id === tokoId);
+  sel.innerHTML = '<option value="">— Pilih Produk (opsional) —</option>' +
+    filtered.map(p => `<option value="${p.name}">${escHtml(p.name)}</option>`).join('');
+}
+
 function renderTable(rows) {
   const tbody = document.getElementById('req-tbody');
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="5">
+    tbody.innerHTML = `<tr><td colspan="7">
       <div class="no-data-state">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <p>Belum ada request</p>
@@ -46,6 +69,8 @@ function renderTable(rows) {
           @${escHtml(r.tiktok_username.replace('@',''))}
         </a>
       </td>
+      <td style="font-size:12px;font-weight:600;">${escHtml(r.toko_name || '—')}</td>
+      <td style="font-size:12px;color:#64748b;">${escHtml(r.produk_name || '—')}</td>
       <td style="font-size:13px;max-width:280px;color:var(--text);">${escHtml(r.catatan || '—')}</td>
       <td style="font-size:12px;font-weight:600;color:#64748b;">${escHtml(r.advertiser_name || '—')}</td>
       <td>${statusBadge(r.status || 'pending')}</td>
@@ -76,10 +101,14 @@ async function loadRequests() {
 }
 
 async function submitRequest() {
-  const tiktok  = document.getElementById('inp-tiktok').value.trim().replace('@','');
-  const catatan = document.getElementById('inp-catatan').value.trim();
+  const tiktok   = document.getElementById('inp-tiktok').value.trim().replace('@','');
+  const catatan  = document.getElementById('inp-catatan').value.trim();
+  const tokoId   = document.getElementById('inp-toko').value;
+  const tokoName = tokoId ? (_tokoList.find(t => t.id === tokoId)?.name || '') : '';
+  const produk   = document.getElementById('inp-produk').value;
 
-  if (!tiktok) { showToast('Username TikTok wajib diisi', 'error'); return; }
+  if (!tiktok)  { showToast('Username TikTok wajib diisi', 'error'); return; }
+  if (!tokoId)  { showToast('Pilih toko terlebih dahulu', 'error'); return; }
 
   const btn = document.getElementById('btn-submit');
   btn.textContent = 'Mengirim...';
@@ -88,7 +117,10 @@ async function submitRequest() {
   try {
     const { error } = await kolDb().from('creator_requests').insert({
       tiktok_username: tiktok,
-      catatan:         catatan || null,
+      catatan:         catatan  || null,
+      toko_id:         tokoId   || null,
+      toko_name:       tokoName || null,
+      produk_name:     produk   || null,
       advertiser_name: _myProfile?.nama || 'Advertiser',
       advertiser_id:   _myProfile?.id   || null,
       status:          'pending',
@@ -97,6 +129,8 @@ async function submitRequest() {
 
     document.getElementById('inp-tiktok').value  = '';
     document.getElementById('inp-catatan').value = '';
+    document.getElementById('inp-toko').value    = '';
+    document.getElementById('inp-produk').innerHTML = '<option value="">— Pilih Produk (opsional) —</option>';
     showToast('Request berhasil dikirim!', 'success');
     await loadRequests();
   } catch(e) {
@@ -114,5 +148,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderTable(applyFilter());
   });
 
+  await loadMasterData();
   await loadRequests();
 });
