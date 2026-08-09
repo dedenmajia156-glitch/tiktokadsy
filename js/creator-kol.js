@@ -4,6 +4,7 @@
 let _kolAll    = [];  // semua KOL
 let _listingMap = {}; // { kol_id: listingRecord }
 let _videosMap  = {}; // { kol_id: [ videoRecord ] }
+let _tokoList   = []; // [ { id, name } ] dari kol_master
 
 const STATUS_LABEL = {
   new: 'Belum Hubungi', contacted: 'Dihubungi',
@@ -47,17 +48,34 @@ function renderStats(data) {
   document.getElementById('stat-avgscore').textContent = avgScore || '—';
 }
 
+function populateTokoDropdown() {
+  const sel = document.getElementById('fil-toko');
+  if (!sel) return;
+  const saved = sel.value;
+  sel.innerHTML = '<option value="">Semua Toko</option>' +
+    _tokoList.map(t => `<option value="${escHtml(t.name)}">${escHtml(t.name)}</option>`).join('');
+  if (saved) sel.value = saved;
+}
+
 function applyFilters() {
+  const toko   = document.getElementById('fil-toko').value;
   const status = document.getElementById('fil-status').value;
   const tier   = document.getElementById('fil-tier').value;
   const eval_  = document.getElementById('fil-eval').value;
   const q      = document.getElementById('fil-search').value.toLowerCase().trim();
 
   return _kolAll.filter(k => {
+    const listing = _listingMap[k.id];
+
+    // Filter toko: match via kol_listing.toko
+    if (toko) {
+      const listingToko = (listing?.toko || '').trim();
+      if (listingToko !== toko) return false;
+    }
+
     if (status && k.status !== status) return false;
     if (tier && (k.tier || '').toLowerCase() !== tier) return false;
 
-    const listing = _listingMap[k.id];
     const evalResult = listing?.eval_result || null;
     if (eval_ === '__none' && evalResult) return false;
     if (eval_ && eval_ !== '__none' && evalResult !== eval_) return false;
@@ -73,7 +91,7 @@ function applyFilters() {
 function renderTable(rows) {
   const tbody = document.getElementById('kol-tbody');
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="9">
+    tbody.innerHTML = `<tr><td colspan="10">
       <div class="no-data-state">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <p>Tidak ada data yang sesuai filter</p>
@@ -86,6 +104,7 @@ function renderTable(rows) {
     const listing  = _listingMap[k.id];
     const videos   = _videosMap[k.id] || [];
     const evalRes  = listing?.eval_result || null;
+    const tokoName = listing?.toko || '';
     const score    = k.score || 0;
     const scoreColor = score >= 70 ? '#16a34a' : score >= 40 ? '#ca8a04' : '#dc2626';
 
@@ -94,6 +113,10 @@ function renderTable(rows) {
       : '<span style="color:#94a3b8;font-size:12px;">—</span>';
 
     const priorityStar = k.is_priority ? '<span class="priority-star" title="Talent Prioritas">★</span> ' : '';
+
+    const tokoBadge = tokoName
+      ? `<span style="background:#ede9fe;color:#7c3aed;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;">${escHtml(tokoName)}</span>`
+      : '<span style="color:#94a3b8;font-size:12px;">—</span>';
 
     return `<tr>
       <td>
@@ -105,10 +128,11 @@ function renderTable(rows) {
       <td>${tierBadge(k.tier)}</td>
       <td style="font-weight:700;font-size:13px;color:${scoreColor};">${score || '—'}</td>
       <td>${statusBadge(k.status)}</td>
+      <td>${tokoBadge}</td>
       <td style="font-size:12px;max-width:160px;">
-        ${k.niche ? `<div>${escHtml(k.niche)}</div>` : ''}
-        ${k.product ? `<div style="color:#94a3b8;">${escHtml(k.product)}</div>` : ''}
-        ${!k.niche && !k.product ? '—' : ''}
+        ${listing?.produk ? `<div style="font-weight:500;">${escHtml(listing.produk)}</div>` : ''}
+        ${k.niche ? `<div style="color:#94a3b8;">${escHtml(k.niche)}</div>` : ''}
+        ${!listing?.produk && !k.niche ? '—' : ''}
       </td>
       <td style="text-align:center;font-weight:600;">${videos.length || '—'}</td>
       <td>${evalBadge(evalRes)}</td>
@@ -121,7 +145,7 @@ function escHtml(str) {
 }
 
 function bindFilters() {
-  ['fil-status','fil-tier','fil-eval','fil-search'].forEach(id => {
+  ['fil-toko','fil-status','fil-tier','fil-eval','fil-search'].forEach(id => {
     document.getElementById(id)?.addEventListener('input', () => {
       renderTable(applyFilters());
     });
@@ -130,26 +154,31 @@ function bindFilters() {
 
 async function loadKolData() {
   try {
-    // 1. Fetch semua KOL (kol_type = 'kol')
-    const { data: kols, error: kolErr } = await kolDb()
-      .from('kols')
-      .select('id, name, tiktok, wa, email, niche, product, followers, platform, status, ratecard, tier, score, is_priority, kol_type, created_at, updated_at')
-      .eq('kol_type', 'kol')
-      .order('created_at', { ascending: false });
+    // Fetch paralel: KOL + listing + video + toko master
+    const [
+      { data: kols,     error: kolErr },
+      { data: listings },
+      { data: videos },
+      { data: master },
+    ] = await Promise.all([
+      kolDb().from('kols')
+        .select('id, name, tiktok, wa, email, niche, product, followers, platform, status, ratecard, tier, score, is_priority, kol_type, created_at, updated_at')
+        .eq('kol_type', 'kol')
+        .order('created_at', { ascending: false }),
+      kolDb().from('kol_listing')
+        .select('id, kol_id, toko, produk, eval_views, eval_rating, eval_result, eval_notes'),
+      kolDb().from('kol_videos')
+        .select('id, kol_id, link_video, judul, upload_date, kode_boost'),
+      kolDb().from('kol_master')
+        .select('id, name, type')
+        .eq('type', 'toko')
+        .order('name'),
+    ]);
 
     if (kolErr) throw kolErr;
 
-    // 2. Fetch semua listing (eval data)
-    const { data: listings } = await kolDb()
-      .from('kol_listing')
-      .select('id, kol_id, eval_views, eval_rating, eval_result, eval_notes');
-
-    // 3. Fetch semua video
-    const { data: videos } = await kolDb()
-      .from('kol_videos')
-      .select('id, kol_id, link_video, judul, upload_date, kode_boost');
-
-    _kolAll = kols || [];
+    _kolAll   = kols || [];
+    _tokoList = master || [];
 
     // Build maps
     _listingMap = {};
@@ -161,12 +190,13 @@ async function loadKolData() {
       _videosMap[v.kol_id].push(v);
     });
 
+    populateTokoDropdown();
     renderStats(_kolAll);
     renderTable(_kolAll);
 
   } catch (err) {
     console.error('KOL load error:', err);
-    document.getElementById('kol-tbody').innerHTML = `<tr><td colspan="9">
+    document.getElementById('kol-tbody').innerHTML = `<tr><td colspan="10">
       <div class="no-data-state">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         <p>Gagal memuat data KOL.</p>
