@@ -168,12 +168,14 @@ function renderStats(data) {
   const total    = data.length;
   const deal     = data.filter(k => k.status === 'deal').length;
   const priority = data.filter(k => k.is_priority).length;
+  const uploadTt = data.filter(k => _listingMap[k.id]?.upload_tt).length;
   const totalVid = data.reduce((sum, k) => sum + (_videosMap[k.id]?.length || 0), 0);
 
-  document.getElementById('stat-total').textContent    = total;
-  document.getElementById('stat-deal').textContent     = deal;
-  document.getElementById('stat-priority').textContent = priority;
-  document.getElementById('stat-videos').textContent   = totalVid || '—';
+  document.getElementById('stat-total').textContent     = total;
+  document.getElementById('stat-deal').textContent      = deal;
+  document.getElementById('stat-priority').textContent  = priority;
+  document.getElementById('stat-upload-tt').textContent = uploadTt;
+  document.getElementById('stat-videos').textContent    = totalVid || '—';
 }
 
 function setCardFilter(type) {
@@ -224,8 +226,10 @@ function applyFilters() {
     const listing    = _listingMap[k.id];
     const evalResult = (listing?.eval_result || '').toLowerCase();
 
-    if (_activeCardFilter === 'deal'     && k.status !== 'deal') return false;
-    if (_activeCardFilter === 'priority' && !k.is_priority)      return false;
+    if (_activeCardFilter === 'deal'      && k.status !== 'deal')           return false;
+    if (_activeCardFilter === 'priority'  && !k.is_priority)                return false;
+    if (_activeCardFilter === 'upload_tt' && !_listingMap[k.id]?.upload_tt) return false;
+    if (_activeCardFilter === 'total') { /* tampilkan semua */ }
 
     // Filter PIC
     if (pic && k.user_id !== pic) return false;
@@ -395,7 +399,7 @@ async function loadAffiliatorData() {
         .eq('kol_type', 'affiliator')
         .order('created_at', { ascending: false }),
       kolDb().from('kol_listing')
-        .select('id, kol_id, toko, produk, kode_boost, eval_views, eval_rating, eval_result, eval_notes, is_boosted'),
+        .select('id, kol_id, toko, produk, kode_boost, eval_views, eval_rating, eval_result, eval_notes, is_boosted, upload_tt'),
       kolDb().from('kol_videos')
         .select('id, kol_id, link_video, judul, upload_date, kode_boost'),
       kolDb().from('kol_views_log')
