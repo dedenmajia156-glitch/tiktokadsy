@@ -40,6 +40,38 @@ function copyKodeBoost(kode) {
   navigator.clipboard.writeText(kode).then(() => showToast('Kode boost di-copy!', 'success'));
 }
 
+function copyTiktok(username) {
+  const clean = username.replace('@', '');
+  navigator.clipboard.writeText(clean).then(() => showToast('@' + clean + ' di-copy!', 'success'));
+}
+
+async function toggleBoost(kolId) {
+  const listing  = _listingMap[kolId];
+  const newVal   = !(listing?.is_boosted || false);
+  const btn      = document.getElementById(`boost-btn-${kolId}`);
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+
+  try {
+    if (listing) {
+      const { error } = await kolDb().from('kol_listing')
+        .update({ is_boosted: newVal })
+        .eq('kol_id', kolId);
+      if (error) throw error;
+      _listingMap[kolId] = { ...listing, is_boosted: newVal };
+    } else {
+      const { error } = await kolDb().from('kol_listing')
+        .insert({ kol_id: kolId, is_boosted: newVal });
+      if (error) throw error;
+      _listingMap[kolId] = { kol_id: kolId, is_boosted: newVal };
+    }
+    renderTable(applyFilters());
+    showToast(newVal ? 'Ditandai sudah di boost!' : 'Tanda boost dihapus', newVal ? 'success' : 'info');
+  } catch(e) {
+    showToast('Gagal update status boost', 'error');
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  }
+}
+
 // ── CATATAN ──
 async function loadRequestsCount() {
   try {
@@ -250,7 +282,7 @@ function renderTable(rows) {
   renderPagination(rows.length);
   const paged = rows.slice((_currentPage - 1) * PAGE_SIZE, _currentPage * PAGE_SIZE);
   if (!paged.length) {
-    tbody.innerHTML = `<tr><td colspan="11">
+    tbody.innerHTML = `<tr><td colspan="12">
       <div class="no-data-state">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <p>Tidak ada data yang sesuai filter</p>
@@ -267,7 +299,12 @@ function renderTable(rows) {
     const totalViews = _viewsMap[k.id] || 0;
 
     const tiktokLink = k.tiktok
-      ? `<a href="https://www.tiktok.com/@${k.tiktok.replace('@','')}" target="_blank" style="color:var(--primary);text-decoration:none;font-size:12px;">@${k.tiktok.replace('@','')}</a>`
+      ? `<div style="display:flex;align-items:center;gap:5px;">
+           <a href="https://www.tiktok.com/@${k.tiktok.replace('@','')}" target="_blank" style="color:var(--primary);text-decoration:none;font-size:12px;">@${k.tiktok.replace('@','')}</a>
+           <button onclick="copyTiktok('${escHtml(k.tiktok)}')" title="Salin username" style="background:none;border:none;cursor:pointer;padding:2px;color:#94a3b8;display:flex;align-items:center;" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='#94a3b8'">
+             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+           </button>
+         </div>`
       : '<span style="color:#94a3b8;font-size:12px;">—</span>';
 
     const priorityStar = k.is_priority ? '<span class="priority-star" title="Talent Prioritas">★</span> ' : '';
@@ -310,6 +347,13 @@ function renderTable(rows) {
           : '<span style="color:#94a3b8;font-size:12px;">—</span>'}
       </td>
       <td style="text-align:center;">${fmtViews(totalViews)}</td>
+      <td style="text-align:center;">
+        <button id="boost-btn-${escHtml(k.id)}" onclick="toggleBoost('${escHtml(k.id)}')"
+          title="${listing?.is_boosted ? 'Sudah di boost — klik untuk batalkan' : 'Belum di boost — klik untuk tandai'}"
+          style="background:${listing?.is_boosted ? '#dcfce7' : '#f1f5f9'};color:${listing?.is_boosted ? '#16a34a' : '#94a3b8'};border:${listing?.is_boosted ? '1.5px solid #86efac' : '1.5px solid #e2e8f0'};border-radius:8px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;">
+          ${listing?.is_boosted ? '✅ Sudah' : '◻ Belum'}
+        </button>
+      </td>
       <td>${evalBadge(evalRes)}</td>
       <td>${priorityLabel}</td>
       <td style="text-align:center;">
@@ -349,7 +393,7 @@ async function loadAffiliatorData() {
         .eq('kol_type', 'affiliator')
         .order('created_at', { ascending: false }),
       kolDb().from('kol_listing')
-        .select('id, kol_id, toko, produk, kode_boost, eval_views, eval_rating, eval_result, eval_notes'),
+        .select('id, kol_id, toko, produk, kode_boost, eval_views, eval_rating, eval_result, eval_notes, is_boosted'),
       kolDb().from('kol_videos')
         .select('id, kol_id, link_video, judul, upload_date, kode_boost'),
       kolDb().from('kol_views_log')
@@ -400,13 +444,13 @@ async function loadAffiliatorData() {
 
   } catch (err) {
     console.error('Affiliator load error:', err);
-    document.getElementById('aff-tbody').innerHTML = `<tr><td colspan="11">
+    document.getElementById('aff-tbody').innerHTML = `<tr><td colspan="12">
       <div class="no-data-state">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         <p>Gagal memuat data Affiliator.</p>
         <p style="font-size:12px;margin-top:6px;">Kemungkinan karena RLS Supabase KOL Management.<br>Hubungi developer untuk konfigurasi akses.</p>
       </div>
-    </td></tr>`;
+    </td></tr>`; // colspan 12
     showToast('Gagal memuat data Affiliator', 'error');
   }
 }
