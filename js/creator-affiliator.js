@@ -151,7 +151,9 @@ function setCardFilter(type) {
   }
 
   _currentPage = 1;
-  renderTable(applyFilters());
+  const filtered = applyFilters();
+  renderStats(filtered);
+  renderTable(filtered);
 }
 
 function populateTokoDropdown() {
@@ -324,7 +326,9 @@ function bindFilters() {
   ['fil-pic','fil-toko','fil-eval','fil-search'].forEach(id => {
     document.getElementById(id)?.addEventListener('input', () => {
       _currentPage = 1;
-      renderTable(applyFilters());
+      const filtered = applyFilters();
+      renderStats(filtered);
+      renderTable(filtered);
     });
   });
 }
