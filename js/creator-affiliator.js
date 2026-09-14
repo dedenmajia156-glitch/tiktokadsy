@@ -74,6 +74,35 @@ async function toggleBoost(kolId) {
   }
 }
 
+async function toggleUploadKodeBoost(kolId) {
+  const listing = _listingMap[kolId];
+  const newVal  = !(listing?.upload_kode_boost || false);
+  const btn     = document.getElementById(`ukb-btn-${kolId}`);
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+
+  try {
+    const record = {
+      ...(listing || {}),
+      id:                listing?.id || crypto.randomUUID(),
+      kol_id:            kolId,
+      upload_kode_boost: newVal,
+      updated_at:        new Date().toISOString(),
+    };
+    if (!listing?.id) record.created_at = new Date().toISOString();
+
+    const { error } = await kolDb().from('kol_listing').upsert(record);
+    if (error) throw error;
+
+    _listingMap[kolId] = { ...record };
+    renderTable(applyFilters());
+    showToast(newVal ? 'Kode boost sudah diupload!' : 'Tanda upload kode boost dihapus', newVal ? 'success' : 'info');
+  } catch(e) {
+    console.error('toggleUploadKodeBoost error:', e);
+    showToast('Gagal update: ' + (e.message || 'cek console'), 'error');
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  }
+}
+
 // ── CATATAN ──
 async function loadRequestsCount() {
   try {
@@ -288,7 +317,7 @@ function renderTable(rows) {
   renderPagination(rows.length);
   const paged = rows.slice((_currentPage - 1) * PAGE_SIZE, _currentPage * PAGE_SIZE);
   if (!paged.length) {
-    tbody.innerHTML = `<tr><td colspan="12">
+    tbody.innerHTML = `<tr><td colspan="13">
       <div class="no-data-state">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <p>Tidak ada data yang sesuai filter</p>
@@ -360,6 +389,13 @@ function renderTable(rows) {
           ${listing?.is_boosted ? '✅ Sudah' : '◻ Belum'}
         </button>
       </td>
+      <td style="text-align:center;">
+        <button id="ukb-btn-${escHtml(k.id)}" onclick="toggleUploadKodeBoost('${escHtml(k.id)}')"
+          title="${listing?.upload_kode_boost ? 'Sudah upload kode boost — klik untuk batalkan' : 'Belum upload kode boost — klik untuk tandai'}"
+          style="background:${listing?.upload_kode_boost ? '#dbeafe' : '#f1f5f9'};color:${listing?.upload_kode_boost ? '#1d4ed8' : '#94a3b8'};border:${listing?.upload_kode_boost ? '1.5px solid #93c5fd' : '1.5px solid #e2e8f0'};border-radius:8px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;">
+          ${listing?.upload_kode_boost ? '✅ Sudah' : '◻ Belum'}
+        </button>
+      </td>
       <td>${evalBadge(evalRes)}</td>
       <td>${priorityLabel}</td>
       <td style="text-align:center;">
@@ -399,7 +435,7 @@ async function loadAffiliatorData() {
         .eq('kol_type', 'affiliator')
         .order('created_at', { ascending: false }),
       kolDb().from('kol_listing')
-        .select('id, kol_id, toko, produk, kode_boost, eval_views, eval_rating, eval_result, eval_notes, is_boosted, upload_tt'),
+        .select('id, kol_id, toko, produk, kode_boost, eval_views, eval_rating, eval_result, eval_notes, is_boosted, upload_tt, upload_kode_boost'),
       kolDb().from('kol_videos')
         .select('id, kol_id, link_video, judul, upload_date, kode_boost'),
       kolDb().from('kol_views_log')
@@ -450,7 +486,7 @@ async function loadAffiliatorData() {
 
   } catch (err) {
     console.error('Affiliator load error:', err);
-    document.getElementById('aff-tbody').innerHTML = `<tr><td colspan="12">
+    document.getElementById('aff-tbody').innerHTML = `<tr><td colspan="13">
       <div class="no-data-state">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         <p>Gagal memuat data Affiliator.</p>
