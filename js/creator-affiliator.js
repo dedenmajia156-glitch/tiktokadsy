@@ -353,7 +353,12 @@ function renderTable(rows) {
 
     return `<tr>
       <td>
-        <div style="font-weight:600;font-size:13px;">${priorityStar}${escHtml(k.name || '-')}</div>
+        <div style="display:flex;align-items:center;gap:5px;font-weight:600;font-size:13px;">
+          ${priorityStar}${escHtml(k.name || '-')}
+          <button onclick="navigator.clipboard.writeText('${escHtml(k.name || '')}').then(()=>showToast('Nama di-copy!','success'))" title="Salin nama" style="background:none;border:none;cursor:pointer;padding:2px;color:#94a3b8;display:flex;align-items:center;font-weight:400;" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='#94a3b8'">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
         ${k.wa ? `<div style="font-size:11px;color:#94a3b8;">${escHtml(k.wa)}</div>` : ''}
       </td>
       <td>${tiktokLink}</td>
