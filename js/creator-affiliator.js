@@ -383,17 +383,17 @@ function renderTable(rows) {
       </td>
       <td style="text-align:center;">${fmtViews(totalViews)}</td>
       <td style="text-align:center;">
-        <button id="boost-btn-${escHtml(k.id)}" onclick="toggleBoost('${escHtml(k.id)}')"
-          title="${listing?.is_boosted ? 'Sudah di boost — klik untuk batalkan' : 'Belum di boost — klik untuk tandai'}"
-          style="background:${listing?.is_boosted ? '#dcfce7' : '#f1f5f9'};color:${listing?.is_boosted ? '#16a34a' : '#94a3b8'};border:${listing?.is_boosted ? '1.5px solid #86efac' : '1.5px solid #e2e8f0'};border-radius:8px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;">
-          ${listing?.is_boosted ? '✅ Sudah' : '◻ Belum'}
-        </button>
-      </td>
-      <td style="text-align:center;">
         <button id="ukb-btn-${escHtml(k.id)}" onclick="toggleUploadKodeBoost('${escHtml(k.id)}')"
           title="${listing?.upload_kode_boost ? 'Sudah upload kode boost — klik untuk batalkan' : 'Belum upload kode boost — klik untuk tandai'}"
           style="background:${listing?.upload_kode_boost ? '#dbeafe' : '#f1f5f9'};color:${listing?.upload_kode_boost ? '#1d4ed8' : '#94a3b8'};border:${listing?.upload_kode_boost ? '1.5px solid #93c5fd' : '1.5px solid #e2e8f0'};border-radius:8px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;">
           ${listing?.upload_kode_boost ? '✅ Sudah' : '◻ Belum'}
+        </button>
+      </td>
+      <td style="text-align:center;">
+        <button id="boost-btn-${escHtml(k.id)}" onclick="toggleBoost('${escHtml(k.id)}')"
+          title="${listing?.is_boosted ? 'Sudah di boost — klik untuk batalkan' : 'Belum di boost — klik untuk tandai'}"
+          style="background:${listing?.is_boosted ? '#dcfce7' : '#f1f5f9'};color:${listing?.is_boosted ? '#16a34a' : '#94a3b8'};border:${listing?.is_boosted ? '1.5px solid #86efac' : '1.5px solid #e2e8f0'};border-radius:8px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;">
+          ${listing?.is_boosted ? '✅ Sudah' : '◻ Belum'}
         </button>
       </td>
       <td>${evalBadge(evalRes)}</td>
