@@ -6,6 +6,7 @@ let _listingMap = {}; // { kol_id: listingRecord }
 let _videosMap  = {}; // { kol_id: [ videoRecord ] }
 let _viewsMap   = {}; // { kol_id: total views }
 let _tokoList   = []; // [ { id, name } ] dari kol_master
+let _profileMap = {}; // { user_id: name } dari profiles KOL Management
 let _currentPage      = 1;
 const PAGE_SIZE       = 20;
 let _activeCardFilter = null;
@@ -162,7 +163,23 @@ function populateTokoDropdown() {
   if (saved) sel.value = saved;
 }
 
+function populatePicDropdown() {
+  const sel = document.getElementById('fil-pic');
+  if (!sel) return;
+  const saved = sel.value;
+  // Kumpulkan user_id yang ada di data affiliator saat ini
+  const usedIds = [...new Set(_affAll.map(k => k.user_id).filter(Boolean))];
+  sel.innerHTML = '<option value="">Semua PIC</option>' +
+    usedIds
+      .map(uid => ({ uid, name: _profileMap[uid] || uid }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(p => `<option value="${escHtml(p.uid)}">${escHtml(p.name)}</option>`)
+      .join('');
+  if (saved) sel.value = saved;
+}
+
 function applyFilters() {
+  const pic   = document.getElementById('fil-pic').value;
   const toko  = document.getElementById('fil-toko').value;
   const eval_ = document.getElementById('fil-eval').value;
   const q     = document.getElementById('fil-search').value.toLowerCase().trim();
@@ -173,6 +190,9 @@ function applyFilters() {
 
     if (_activeCardFilter === 'deal'     && k.status !== 'deal') return false;
     if (_activeCardFilter === 'priority' && !k.is_priority)      return false;
+
+    // Filter PIC
+    if (pic && k.user_id !== pic) return false;
 
     // Filter toko: match via kol_listing.toko
     if (toko) {
@@ -301,7 +321,7 @@ function renderTable(rows) {
 }
 
 function bindFilters() {
-  ['fil-toko','fil-eval','fil-search'].forEach(id => {
+  ['fil-pic','fil-toko','fil-eval','fil-search'].forEach(id => {
     document.getElementById(id)?.addEventListener('input', () => {
       _currentPage = 1;
       renderTable(applyFilters());
@@ -318,9 +338,10 @@ async function loadAffiliatorData() {
       { data: videos },
       { data: viewsLog },
       { data: master },
+      { data: profiles },
     ] = await Promise.all([
       kolDb().from('kols')
-        .select('id, name, tiktok, wa, email, niche, product, followers, platform, status, is_priority, kol_type, created_at, updated_at')
+        .select('id, name, tiktok, wa, email, niche, product, followers, platform, status, is_priority, kol_type, user_id, created_at, updated_at')
         .eq('kol_type', 'affiliator')
         .order('created_at', { ascending: false }),
       kolDb().from('kol_listing')
@@ -333,12 +354,19 @@ async function loadAffiliatorData() {
         .select('id, name, type')
         .eq('type', 'toko')
         .order('name'),
+      kolDb().from('profiles')
+        .select('id, name')
+        .order('name'),
     ]);
 
     if (affErr) throw affErr;
 
     _affAll   = affs || [];
     _tokoList = master || [];
+
+    // Build profile map: { user_id → name }
+    _profileMap = {};
+    (profiles || []).forEach(p => { _profileMap[p.id] = p.name; });
 
     // Build maps
     _listingMap = {};
@@ -362,6 +390,7 @@ async function loadAffiliatorData() {
     });
 
     populateTokoDropdown();
+    populatePicDropdown();
     renderStats(_affAll);
     renderTable(_affAll);
 
