@@ -52,22 +52,24 @@ async function toggleBoost(kolId) {
   if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
 
   try {
-    if (listing) {
-      const { error } = await kolDb().from('kol_listing')
-        .update({ is_boosted: newVal })
-        .eq('kol_id', kolId);
-      if (error) throw error;
-      _listingMap[kolId] = { ...listing, is_boosted: newVal };
-    } else {
-      const { error } = await kolDb().from('kol_listing')
-        .insert({ kol_id: kolId, is_boosted: newVal });
-      if (error) throw error;
-      _listingMap[kolId] = { kol_id: kolId, is_boosted: newVal };
-    }
+    const record = {
+      ...(listing || {}),
+      id:        listing?.id || crypto.randomUUID(),
+      kol_id:    kolId,
+      is_boosted: newVal,
+      updated_at: new Date().toISOString(),
+    };
+    if (!listing?.id) record.created_at = new Date().toISOString();
+
+    const { error } = await kolDb().from('kol_listing').upsert(record);
+    if (error) throw error;
+
+    _listingMap[kolId] = { ...record };
     renderTable(applyFilters());
     showToast(newVal ? 'Ditandai sudah di boost!' : 'Tanda boost dihapus', newVal ? 'success' : 'info');
   } catch(e) {
-    showToast('Gagal update status boost', 'error');
+    console.error('toggleBoost error:', e);
+    showToast('Gagal update: ' + (e.message || 'cek console'), 'error');
     if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
   }
 }
