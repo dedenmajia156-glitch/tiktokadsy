@@ -51,7 +51,14 @@ module.exports = async (req, res) => {
   .info { background:#f8fafc; border-radius:12px; padding:16px; margin:20px 0; text-align:left; }
   .info-row { display:flex; justify-content:space-between; font-size:14px; padding:4px 0; }
   .info-row .label { color:#64748b; }
-  .info-row .value { font-weight:600; color:#1e293b; }
+  .info-row .value { font-weight:600; color:#1e293b; display:flex; align-items:center; gap:6px; }
+  .btn-copy {
+    background:none; border:1px solid #cbd5e1; border-radius:6px; padding:2px 7px;
+    font-size:12px; color:#64748b; cursor:pointer; font-family:inherit;
+    transition:all .15s;
+  }
+  .btn-copy:hover { background:#f1f5f9; color:#1e293b; }
+  .btn-copy.copied { border-color:#10b981; color:#10b981; background:#f0fdf4; }
   .btn-approve {
     width:100%; padding:14px; border:none; border-radius:12px;
     background:#10b981; color:#fff; font-size:15px; font-weight:700;
@@ -69,7 +76,7 @@ module.exports = async (req, res) => {
     <h1>Konfirmasi Approve Top Up</h1>
     <div class="info">
       <div class="info-row"><span class="label">Advertiser</span><span class="value">${userName}</span></div>
-      <div class="info-row"><span class="label">Nominal</span><span class="value">Rp ${nominal}</span></div>
+      <div class="info-row"><span class="label">Nominal</span><span class="value">Rp ${nominal}<button class="btn-copy" id="btn-copy" onclick="copyNominal()">Salin</button></span></div>
     </div>
     <form method="POST" action="/api/approve?id=${id}&token=${token}" onsubmit="handleSubmit(event)">
       <button type="submit" class="btn-approve" id="btn-approve">✅ Approve Sekarang</button>
@@ -81,6 +88,14 @@ module.exports = async (req, res) => {
       const btn = document.getElementById('btn-approve');
       btn.disabled = true;
       btn.textContent = 'Memproses...';
+    }
+    function copyNominal() {
+      const btn = document.getElementById('btn-copy');
+      navigator.clipboard.writeText('Rp ${nominal}').then(() => {
+        btn.textContent = 'Tersalin!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Salin'; btn.classList.remove('copied'); }, 2000);
+      });
     }
   </script>
 </body>
