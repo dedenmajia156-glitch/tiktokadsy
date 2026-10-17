@@ -102,7 +102,33 @@ Semua angka dalam number (tanpa Rp, tanpa titik/koma pemisah ribuan). Field tida
     return res.json({ ok: true, results });
   }
 
-  return res.status(400).json({ error: 'Invalid action. Use: extract | notify' });
+  // ── Fetch list WA groups dari Fonnte ──
+  if (action === 'fetch_groups') {
+    const FONNTE_TOKEN = process.env.FONNTE_TOKEN;
+    if (!FONNTE_TOKEN) return res.status(500).json({ error: 'FONNTE_TOKEN not configured' });
+
+    try {
+      // Step 1: sync group list di sisi Fonnte
+      await fetch('https://api.fonnte.com/fetch-group', {
+        method: 'POST',
+        headers: { 'Authorization': FONNTE_TOKEN }
+      });
+
+      // Step 2: ambil list group
+      const resp = await fetch('https://api.fonnte.com/get-whatsapp-group', {
+        method: 'POST',
+        headers: { 'Authorization': FONNTE_TOKEN }
+      });
+      const data = await resp.json();
+
+      const groups = Array.isArray(data) ? data : (data.data || data.groups || []);
+      return res.json({ ok: true, groups });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  return res.status(400).json({ error: 'Invalid action. Use: extract | notify | fetch_groups' });
 };
 
 function formatWaTarget(no) {
