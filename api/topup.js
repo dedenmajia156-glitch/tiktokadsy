@@ -81,7 +81,8 @@ Semua angka dalam number (tanpa Rp, tanpa titik/koma pemisah ribuan). Field tida
     if (!FONNTE_TOKEN) return res.status(500).json({ error: 'FONNTE_TOKEN not configured' });
 
     const results = await Promise.all(
-      wa_targets.map(async target => {
+      wa_targets.map(async rawTarget => {
+        const target = formatWaTarget(rawTarget);
         try {
           const r = await fetch('https://api.fonnte.com/send', {
             method: 'POST',
@@ -102,4 +103,13 @@ Semua angka dalam number (tanpa Rp, tanpa titik/koma pemisah ribuan). Field tida
   }
 
   return res.status(400).json({ error: 'Invalid action. Use: extract | notify' });
+};
+
+function formatWaTarget(no) {
+  const s = String(no).trim();
+  if (s.includes('@g.us')) return s; // group ID — biarkan as-is
+  const digits = s.replace(/\D/g, '');
+  if (digits.startsWith('0')) return '62' + digits.slice(1);
+  if (!digits.startsWith('62')) return '62' + digits;
+  return digits;
 };
