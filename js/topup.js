@@ -24,10 +24,10 @@ let currentStatus = 'pending'; // default filter untuk admin
   if (profile?.role !== 'admin') setupUploadArea();
 })();
 
-// ── Load WA targets dari app_settings ──
+// ── Load WA group dari app_settings ──
 async function loadSettings() {
-  const { data } = await db().from('app_settings').select('value').eq('key', 'topup_wa_targets').single();
-  waTargets = data?.value || [];
+  const { data } = await db().from('app_settings').select('value').eq('key', 'topup_wa_group').single();
+  waTargets = data?.value ? [data.value] : [];
 }
 
 // ── Tab switching ──
